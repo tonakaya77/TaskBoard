@@ -72,7 +72,9 @@ const state = {
       subtasks: [['資料を集める', true], ['下書きを書く', false], ['見直す', false]],
     }),
     makeTask(kaji, 0, '買い物', '2026-11-10', { today: true, desc: '牛乳、卵、パン' }),
-    makeTask(kadai, 0, '資料作成', '2026-11-03'),
+    makeTask(kadai, 0, '資料作成', '2026-11-03', {
+      subtasks: [['構成を決める', false], ['スライドを作る', false]],
+    }),
     makeTask(kadai, 0, '振り返りを書く', null),
     makeTask(kadai, 3, '参考書を買う', '2026-11-02'),
     makeTask(kaji, 0, '掃除', '2026-11-15'),
@@ -80,11 +82,12 @@ const state = {
 })();
 
 /* 画面の一時的な状態 */
+const thisMonth = () => ({ y: Number(TODAY.slice(0, 4)), m: Number(TODAY.slice(5, 7)) - 1 });
 const ui = {
   menuOpen: false,
-  projectId: null,     // 直前に表示したプロジェクト
+  viewKey: null,       // 今表示しているプロジェクトの画面（「プロジェクトID/board」など）
   boardIdx: 0,         // スマホのボードで表示中の列
-  cal: { y: 2026, m: 10 }, // カレンダーの表示月（m は 0 始まり）
+  cal: thisMonth(),    // カレンダーの表示月（m は 0 始まり）
   calSel: TODAY,       // スマホのカレンダーで選択中の日付
 };
 
@@ -131,6 +134,27 @@ function validateText(value, label, max, required) {
   return '';
 }
 
+/* サブタスクの数（F-06）：完了した数 / 全体の数。サブタスクがないときは出さない */
+function subCountHTML(t) {
+  if (!t.subtasks.length) return '';
+  const done = t.subtasks.filter((s) => s.done).length;
+  return `<span class="sub-count" title="サブタスク ${done}/${t.subtasks.length} 完了"><span class="sub-count-icon" aria-hidden="true">✓</span>${done}/${t.subtasks.length}</span>`;
+}
+
+/* 列の一番下に入れるときの order（F-04・F-05）。列の中で一番大きい order の次にする */
+function bottomOrder(projectId, statusId, exceptId) {
+  const orders = columnTasks(projectId, statusId).filter((t) => t.id !== exceptId).map((t) => t.order);
+  return orders.length ? Math.max(...orders) + 1 : 0;
+}
+
+/* 新しいプロジェクトの色（F-02）：基本の8色から、まだ使われていない色を赤から順に選ぶ。
+   8色とも使われているときは、使われている回数が一番少ない色を赤から順に選ぶ（赤から繰り返す） */
+function nextProjectColor() {
+  const count = (code) => state.projects.filter((p) => p.color.toUpperCase() === code.toUpperCase()).length;
+  const min = Math.min(...BASE_COLORS.map((c) => count(c.code)));
+  return BASE_COLORS.find((c) => count(c.code) === min).code;
+}
+
 function columnTasks(projectId, statusId) {
   return state.tasks.filter((t) => t.projectId === projectId && t.statusId === statusId).sort(byOrder);
 }
@@ -167,12 +191,16 @@ function render() {
 
   if (r.name === 'login') { $app.innerHTML = loginHTML(); return; }
 
-  if (r.projectId && r.projectId !== ui.projectId) {
-    // 別のプロジェクトを開いたら、表示位置を初期状態に戻す
-    ui.projectId = r.projectId;
-    ui.boardIdx = 0;
-    ui.cal = { y: Number(TODAY.slice(0, 4)), m: Number(TODAY.slice(5, 7)) - 1 };
-    ui.calSel = TODAY;
+  // ボード・カレンダーを開いたときは、毎回初期状態に戻す（別の画面やタブから来たとき。
+  // ダイアログを閉じたときなど、同じ画面のままの再描画では戻さない）
+  const viewKey = r.projectId ? `${r.projectId}/${r.name}` : null;
+  if (viewKey !== ui.viewKey) {
+    ui.viewKey = viewKey;
+    if (r.name === 'board') ui.boardIdx = 0; // 最初の列
+    if (r.name === 'calendar') {
+      ui.cal = thisMonth(); // 今月
+      ui.calSel = TODAY;    // 今日を選んだ状態
+    }
   }
 
   let inner = '';
@@ -299,6 +327,8 @@ function dashCardHTML(t, mode) {
     ${a ? `<div class="card-alert"><span class="badge badge-${a.level}">${a.label}</span></div>` : ''}
     ${a && a.overdue ? '<div class="alert-note">見直しをしてください</div>' : ''}
     <div class="card-actions">
+      ${subCountHTML(t)}
+      <span class="spacer"></span>
       ${mode === 'today'
         ? `<button class="btn btn-sm" data-act="today-remove" data-id="${t.id}">外す</button>`
         : `<button class="btn btn-sm" data-act="today-add" data-id="${t.id}">今日やる</button>`}
@@ -333,6 +363,7 @@ function boardCardHTML(t, mobile) {
   <div class="card card-board" data-act="open-task" data-id="${t.id}" ${mobile ? '' : 'draggable="true" data-drag="card"'} title="${esc(t.title)}">
     <div class="card-title">${esc(t.title)}</div>
     <div class="card-meta">${due}</div>
+    ${t.subtasks.length ? `<div class="card-meta">${subCountHTML(t)}</div>` : ''}
   </div>`;
 }
 
@@ -396,16 +427,18 @@ function calendarHTML(p) {
     if (!date) return '<div class="cal-cell blank"></div>';
     const day = Number(date.slice(8));
     const ts = tasksOn(date);
+    // 今日の日付は数字を基本色の丸で塗る（F-09）。スマホの選択中は枠線の丸（今日を選んでいるときは塗ったまま）
+    const today = date === TODAY ? 'today' : '';
     if (mobile) {
       return `
-      <div class="cal-cell ${date === ui.calSel ? 'selected' : ''}" data-act="cal-sel" data-date="${date}">
-        <span class="cal-date">${day}</span>
+      <div class="cal-cell ${today} ${date === ui.calSel ? 'selected' : ''}" data-act="cal-sel" data-date="${date}">
+        <span class="cal-date"><span class="cal-num">${day}</span></span>
         <div class="cal-marks">${ts.map((t) => `<span class="mark ${calClass(t)}"></span>`).join('')}</div>
       </div>`;
     }
     return `
-    <div class="cal-cell">
-      <div class="cal-date">${day}</div>
+    <div class="cal-cell ${today}">
+      <div class="cal-date"><span class="cal-num">${day}</span></div>
       ${ts.map((t) => `<div class="cal-task ${calClass(t)}" data-act="open-task" data-id="${t.id}" title="${esc(t.title)}">${esc(t.title)}</div>`).join('')}
     </div>`;
   }).join('');
@@ -423,7 +456,9 @@ function calendarHTML(p) {
           const a = alertOf(t);
           const tag = isDone(t) ? '<span class="badge badge-gray">完了</span>'
             : a ? `<span class="badge badge-${a.level}">${a.label}</span>` : '';
-          return `<div class="card" data-act="open-task" data-id="${t.id}"><div class="card-title">${esc(t.title)}</div>${tag ? `<div class="card-meta">${tag}</div>` : ''}</div>`;
+          // 一覧のカードにはサブタスクの数も出す（F-06）。カレンダーのマスには出さない
+          const meta = [tag, subCountHTML(t)].filter(Boolean).join('');
+          return `<div class="card" data-act="open-task" data-id="${t.id}"><div class="card-title">${esc(t.title)}</div>${meta ? `<div class="card-meta">${meta}</div>` : ''}</div>`;
         }).join('') : '<div class="empty">この日のタスクはありません</div>'}
       </div>
     </div>`;
@@ -460,7 +495,7 @@ const actions = {
     const d = new Date(Date.UTC(ui.cal.y, ui.cal.m + Number(el.dataset.dir), 1));
     setCalMonth(d.getUTCFullYear(), d.getUTCMonth());
   },
-  'cal-this': () => setCalMonth(Number(TODAY.slice(0, 4)), Number(TODAY.slice(5, 7)) - 1),
+  'cal-this': () => { const { y, m } = thisMonth(); setCalMonth(y, m); },
   'cal-sel': (el) => { ui.calSel = el.dataset.date; render(); },
 };
 
@@ -575,6 +610,53 @@ document.addEventListener('drop', (e) => {
   else if (kind === 'sub') moveSubtask(Number(id), index);
   else if (kind === 'status') moveStatus(Number(id), index);
 });
+
+/* 指（タッチ・ペン）での並べ替え。サブタスクとステータスのつまみ（=）だけが対象。
+   ネイティブ HTML5 のドラッグはタッチでは動かないため、ポインターイベントで同じ動きを作る */
+let touchDrag = null;
+
+document.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse') return; // マウスは上のネイティブのドラッグを使う
+  const h = e.target.closest('.handle');
+  if (!h) return;
+  const el = h.closest('[data-drag]');
+  const c = el && el.closest('[data-drop]');
+  if (!c || ACCEPTS[c.dataset.drop] !== el.dataset.drag) return;
+  e.preventDefault(); // 画面のスクロールや文字の選択を止める（入力欄からも離れなくなる）
+  if (document.activeElement && document.activeElement.id === 'sub-edit') document.activeElement.blur();
+  h.setPointerCapture(e.pointerId);
+  touchDrag = { pointerId: e.pointerId, id: el.dataset.id, el, container: c };
+  el.classList.add('dragging');
+});
+
+document.addEventListener('pointermove', (e) => {
+  if (!touchDrag || e.pointerId !== touchDrag.pointerId) return;
+  e.preventDefault();
+  const c = touchDrag.container;
+  const { index, items } = insertIndex(c, e.clientY);
+  const existing = c.querySelector(':scope > .drop-line');
+  const ref = items[index] || null;
+  if (existing && existing.nextElementSibling === ref) return;
+  clearDropMarks();
+  const line = document.createElement(c.tagName === 'UL' ? 'li' : 'div');
+  line.className = 'drop-line';
+  c.insertBefore(line, ref);
+});
+
+function endTouchDrag(e, commit) {
+  if (!touchDrag || e.pointerId !== touchDrag.pointerId) return;
+  const { id, el, container: c } = touchDrag;
+  touchDrag = null;
+  const moved = commit && c.querySelector(':scope > .drop-line');
+  const { index } = insertIndex(c, e.clientY);
+  el.classList.remove('dragging');
+  clearDropMarks();
+  if (!moved) return;
+  if (c.dataset.drop === 'sub') moveSubtask(Number(id), index);
+  else if (c.dataset.drop === 'status') moveStatus(Number(id), index);
+}
+document.addEventListener('pointerup', (e) => endTouchDrag(e, true));
+document.addEventListener('pointercancel', (e) => endTouchDrag(e, false));
 
 function moveCard(id, statusId, index) {
   const t = getTask(id);
@@ -705,7 +787,7 @@ function renderDetail() {
         <input class="input" id="sub-new" placeholder="サブタスクを入力">
         <button class="btn" data-act="sub-add">追加</button>
       </div>
-      <div class="err">${esc(ctx.subErr)}</div>
+      <div class="err" id="sub-err">${esc(ctx.subErr)}</div>
     </div>
     <div class="dlg-foot">
       <button class="btn btn-danger-text" data-act="task-del">削除</button>
@@ -718,7 +800,7 @@ function renderDetail() {
   if (editing) {
     editing.focus();
     editing.select();
-    editing.addEventListener('blur', () => commitSubEdit(true));
+    editing.addEventListener('blur', () => commitSubEdit(true, true));
   }
 }
 
@@ -733,7 +815,10 @@ function detailKeydown(e) {
   }
 }
 
-function commitSubEdit(save) {
+/* サブタスクの書き直しを確定する。
+   fromBlur（ほかの場所を押して入力欄から離れたとき）は、書き直していた行だけを戻す。
+   全体を描き直すと、押したボタンやチェックボックスが消えて、その操作が効かなくなるため */
+function commitSubEdit(save, fromBlur = false) {
   const ctx = dlgCtx;
   if (!ctx || ctx.type !== 'detail' || ctx.editingSubId == null) return;
   const input = document.getElementById('sub-edit');
@@ -743,11 +828,22 @@ function commitSubEdit(save) {
   ctx.subErr = '';
   if (save && input && s) {
     const v = input.value.trim();
-    const err = validateText(v, 'サブタスク', 50, true);
-    if (err) ctx.subErr = err;
-    else s.text = v;
+    // 空にしたときは元の文言に戻す（F-06）。文字数オーバーはエラーを出して元に戻す
+    if (v !== '') {
+      const err = validateText(v, 'サブタスク', 50, true);
+      if (err) ctx.subErr = err;
+      else s.text = v;
+    }
   }
-  renderDetail();
+  if (!fromBlur || !input || !s) { renderDetail(); return; }
+  const span = document.createElement('span');
+  span.className = 'sub-text';
+  span.dataset.act = 'sub-edit';
+  span.dataset.id = s.id;
+  span.title = 'クリックで書き直す';
+  span.textContent = s.text;
+  input.replaceWith(span);
+  document.getElementById('sub-err').textContent = ctx.subErr;
 }
 
 function moveSubtask(id, index) {
@@ -888,7 +984,7 @@ Object.assign(dlgActions, {
     if (ctx.taskId) {
       const t = getTask(ctx.taskId);
       if (t.statusId !== f.statusId) {
-        t.order = columnTasks(p.id, f.statusId).length; // 移動先の列の一番下へ
+        t.order = bottomOrder(p.id, f.statusId, t.id); // 移動先の列の一番下へ
         t.statusId = f.statusId;
       }
       t.title = f.title.trim();
@@ -906,7 +1002,7 @@ Object.assign(dlgActions, {
         title: f.title.trim(),
         desc: f.desc,
         due: f.due || null,
-        order: columnTasks(p.id, f.statusId).length,
+        order: bottomOrder(p.id, f.statusId), // 列の一番下へ
         todayDate: null,
         todayOrder: null,
         createdAt: id,
@@ -1128,8 +1224,8 @@ dlgActions['project-create'] = () => {
   const ctx = dlgCtx;
   ctx.error = validateText(ctx.title, 'タイトル', 30, true);
   if (ctx.error) { renderNewProject(); document.getElementById('np-title').focus(); return; }
-  // 色は基本カラーから自動で設定する
-  const p = makeProject(ctx.title.trim(), BASE_COLORS[state.projects.length % BASE_COLORS.length].code);
+  // 色は基本カラーから、まだ使われていない色を自動で設定する
+  const p = makeProject(ctx.title.trim(), nextProjectColor());
   state.projects.push(p);
   $dlg.close();
   dlgCtx = null;
