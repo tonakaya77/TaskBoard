@@ -49,7 +49,7 @@ erDiagram
         date due_date "期限（なくてもよい）"
         int position "列の中の並び順"
         date today_date "今日やるタスクに選んだ日"
-        datetime today_selected_at "今日やるタスクに選んだ日時"
+        int today_order "今日やるタスクの中の並び順"
         datetime created_at
         datetime updated_at
     }
@@ -117,7 +117,7 @@ erDiagram
 | due_date | DATE | | なし | 期限 |
 | position | INT | ○ | | 列の中の並び順 |
 | today_date | DATE | | なし | 今日やるタスクに選んだ日（朝4時の区切りで判断した日付） |
-| today_selected_at | DATETIME | | なし | 今日やるタスクに選んだ日時。今日やるタスクの並び順に使う |
+| today_order | INT | | なし | 今日やるタスクの中の並び順。選んだときに、そのときの最大値＋1を入れる |
 | created_at | DATETIME | ○ | 現在日時 | |
 | updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
 
@@ -146,7 +146,7 @@ erDiagram
 | idx_statuses_project_position | statuses | project_id, position | 通常 | ボードの列と、プロジェクト設定のステータスを並び順に出す |
 | idx_tasks_project_status_position | tasks | project_id, status_id, position | 通常 | ボードで、列ごとのタスクを並び順に出す。複合外部キーの確認にも使う |
 | idx_tasks_project_due | tasks | project_id, due_date | 通常 | カレンダーで、その月に期限があるタスクを出す |
-| idx_tasks_today | tasks | today_date, today_selected_at | 通常 | ダッシュボードで、今日やるタスクを選んだ順に出す |
+| idx_tasks_today | tasks | today_date, today_order | 通常 | ダッシュボードで、今日やるタスクを並び順に出す |
 | idx_subtasks_task_position | subtasks | task_id, position | 通常 | タスク詳細で、サブタスクを並び順に出す |
 
 - 外部キーのカラムには、MySQL（InnoDB）が自動でインデックスを付ける。上の表のインデックスで外部キーのカラムが先頭にあるものは、それを兼ねる
@@ -162,10 +162,12 @@ erDiagram
 | 整合性 | タスクのステータスは、同じプロジェクトのステータスに限る。保存するときにアプリ側で確認し、さらにデータベースでも `project_id` と `status_id` のセットで確認する（複合外部キー） |
 | 整合性 | プロジェクトの `default_status_id` と `done_status_id` も、そのプロジェクトのステータスに限る。アプリ側で確認し、データベースでも `id` とそれぞれのIDのセットで確認する（複合外部キー） |
 | 日付の区切り | 日時は日本時間（Asia/Tokyo）で扱う。「今日」は朝4時に切り替わる（0時〜3時59分は前の日として扱う）。今日やるタスクと期限アラートの両方で、この区切りを使う |
-| 今日やるタスク | 選んだ日を `tasks.today_date` に、選んだ日時を `tasks.today_selected_at` に記録する。`today_date` が「今日」と同じタスクだけを、`today_selected_at` の古い順に表示する。日付が変わると、自動で外れる |
-| 今日やるタスク | タスクを完了ステータスにしたときは、`today_date` と `today_selected_at` を空にする。あとで未完了に戻しても、今日やるタスクには戻らない |
-| 今日やるタスク | 今日やるタスクから外すときも、`today_date` と `today_selected_at` を空にする |
+| 今日やるタスク | 選んだ日を `tasks.today_date` に記録し、`tasks.today_order` に今日やるタスクの最大値＋1を入れる（選んだ順になる）。`today_date` が「今日」と同じタスクだけを、`today_order` の小さい順に表示する。日付が変わると、自動で外れる |
+| 今日やるタスク | タスクを完了ステータスにしたときは、`today_date` と `today_order` を空にする。あとで未完了に戻しても、今日やるタスクには戻らない |
+| 今日やるタスク | 今日やるタスクから外すときも、`today_date` と `today_order` を空にする |
+| 今日やるタスク | 並び順を番号で持つのは、将来、今日やるタスクの中で並べ替える機能を足せるようにするため（[要件定義書](requirements.md) の8章「将来の拡張候補」） |
 | プロジェクトの色 | 基本カラー（赤・オレンジ・黄・緑・青・紫・ピンク・グレーの8色）から選ぶか、#付きのカラーコード（例：`#3B82F6`）で指定する。作成時は基本カラーの1つが自動で設定される |
+| 基本カラー | 基本カラーのカラーコードは、赤 `#EF4444`、オレンジ `#F97316`、黄 `#EAB308`、緑 `#22C55E`、青 `#3B82F6`、紫 `#A855F7`、ピンク `#EC4899`、グレー `#6B7280` |
 | サブタスクの数 | カードとタスク詳細に出す「完了した数 / 全体の数」は保存せず、表示するときに subtasks から数える（数を別のカラムに持つと、サブタスクを変えるたびに更新が必要になり、ずれる原因になるため） |
 | 削除 | プロジェクトを削除すると、その中のステータス・タスク・サブタスクもまとめて削除する。タスクを削除すると、そのサブタスクもまとめて削除する |
 | 削除の順番 | projects と statuses はお互いを参照しているので、プロジェクトを削除するときは、先に `default_status_id` と `done_status_id` を空にしてから、サブタスク → タスク → ステータス → プロジェクトの順に消す |
