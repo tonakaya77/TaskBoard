@@ -8,8 +8,8 @@
 erDiagram
     users ||--o{ projects : "持つ"
     projects ||--o{ statuses : "持つ"
-    projects |o--|| statuses : "初期ステータス"
-    projects |o--|| statuses : "完了ステータス"
+    projects |o--o| statuses : "初期ステータス"
+    projects |o--o| statuses : "完了ステータス"
     projects ||--o{ tasks : "持つ"
     statuses ||--o{ tasks : "分類する"
     tasks ||--o{ subtasks : "持つ"
@@ -49,6 +49,7 @@ erDiagram
         date due_date "期限（なくてもよい）"
         int position "列の中の並び順"
         date today_date "今日やるタスクに選んだ日"
+        datetime today_selected_at "今日やるタスクに選んだ日時"
         datetime created_at
         datetime updated_at
     }
@@ -86,8 +87,8 @@ erDiagram
 | user_id | BIGINT | ○ | | 外部キー → users.id。持ち主 |
 | title | VARCHAR(30) | ○ | | |
 | color | CHAR(7) | ○ | 基本カラーの1つ | `#` ＋ 16進数6桁 |
-| default_status_id | BIGINT | | なし（空） | 外部キー → statuses.id。初期ステータス（未着手）。ステータスを作った直後に記録する |
-| done_status_id | BIGINT | | なし（空） | 外部キー → statuses.id。完了ステータス。ステータスを作った直後に記録する |
+| default_status_id | BIGINT | | なし（空） | 初期ステータス（未着手）。（id, default_status_id）で statuses（project_id, id）を参照する複合外部キー。ステータスを作った直後に記録する |
+| done_status_id | BIGINT | | なし（空） | 完了ステータス。（id, done_status_id）で statuses（project_id, id）を参照する複合外部キー。ステータスを作った直後に記録する |
 | created_at | DATETIME | ○ | 現在日時 | |
 | updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
 
@@ -115,7 +116,8 @@ erDiagram
 | description | VARCHAR(1000) | | なし | 説明 |
 | due_date | DATE | | なし | 期限 |
 | position | INT | ○ | | 列の中の並び順 |
-| today_date | DATE | | なし | 今日やるタスクに選んだ日 |
+| today_date | DATE | | なし | 今日やるタスクに選んだ日（朝4時の区切りで判断した日付） |
+| today_selected_at | DATETIME | | なし | 今日やるタスクに選んだ日時。今日やるタスクの並び順に使う |
 | created_at | DATETIME | ○ | 現在日時 | |
 | updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
 
@@ -140,11 +142,11 @@ erDiagram
 | PRIMARY | 全テーブル | id | 主キー | IDで1件を取り出す |
 | uk_users_email | users | email | 一意 | ログインのとき、メールアドレスでユーザーを探す。同じメールアドレスの登録を防ぐ |
 | idx_projects_user_created | projects | user_id, created_at | 通常 | サイドメニューに、ユーザーのプロジェクトを作成した順に並べる |
-| uk_statuses_project_id | statuses | project_id, id | 一意 | tasks の複合外部キーの参照先にする（4章の整合性） |
+| uk_statuses_project_id | statuses | project_id, id | 一意 | tasks と projects の複合外部キーの参照先にする（4章の整合性） |
 | idx_statuses_project_position | statuses | project_id, position | 通常 | ボードの列と、プロジェクト設定のステータスを並び順に出す |
 | idx_tasks_project_status_position | tasks | project_id, status_id, position | 通常 | ボードで、列ごとのタスクを並び順に出す。複合外部キーの確認にも使う |
 | idx_tasks_project_due | tasks | project_id, due_date | 通常 | カレンダーで、その月に期限があるタスクを出す |
-| idx_tasks_today | tasks | today_date | 通常 | ダッシュボードで、今日やるタスクを出す |
+| idx_tasks_today | tasks | today_date, today_selected_at | 通常 | ダッシュボードで、今日やるタスクを選んだ順に出す |
 | idx_subtasks_task_position | subtasks | task_id, position | 通常 | タスク詳細で、サブタスクを並び順に出す |
 
 - 外部キーのカラムには、MySQL（InnoDB）が自動でインデックスを付ける。上の表のインデックスで外部キーのカラムが先頭にあるものは、それを兼ねる
@@ -158,9 +160,13 @@ erDiagram
 | 初期・完了ステータス | `default_status_id` と `done_status_id` は、プロジェクトを作った時点ではまだ空にしておき、4つのステータスを作った直後に記録する |
 | 初期・完了ステータス | 初期か完了かはIDで判断するので、名前を変えても影響しない。初期ステータスと完了ステータスは削除できない。タスクを作るときのステータスの初期値は、初期ステータス |
 | 整合性 | タスクのステータスは、同じプロジェクトのステータスに限る。保存するときにアプリ側で確認し、さらにデータベースでも `project_id` と `status_id` のセットで確認する（複合外部キー） |
+| 整合性 | プロジェクトの `default_status_id` と `done_status_id` も、そのプロジェクトのステータスに限る。アプリ側で確認し、データベースでも `id` とそれぞれのIDのセットで確認する（複合外部キー） |
 | 日付の区切り | 日時は日本時間（Asia/Tokyo）で扱う。「今日」は朝4時に切り替わる（0時〜3時59分は前の日として扱う）。今日やるタスクと期限アラートの両方で、この区切りを使う |
-| 今日やるタスク | 選んだ日を `tasks.today_date` に記録する。その日付が「今日」と同じタスクだけを、今日やるタスクとして表示する。日付が変わると、自動で外れる |
-| 今日やるタスク | 完了ステータスのタスクは、`today_date` が今日でも、今日やるタスクに表示しない |
+| 今日やるタスク | 選んだ日を `tasks.today_date` に、選んだ日時を `tasks.today_selected_at` に記録する。`today_date` が「今日」と同じタスクだけを、`today_selected_at` の古い順に表示する。日付が変わると、自動で外れる |
+| 今日やるタスク | タスクを完了ステータスにしたときは、`today_date` と `today_selected_at` を空にする。あとで未完了に戻しても、今日やるタスクには戻らない |
+| 今日やるタスク | 今日やるタスクから外すときも、`today_date` と `today_selected_at` を空にする |
 | プロジェクトの色 | 基本カラー（赤・オレンジ・黄・緑・青・紫・ピンク・グレーの8色）から選ぶか、#付きのカラーコード（例：`#3B82F6`）で指定する。作成時は基本カラーの1つが自動で設定される |
+| サブタスクの数 | カードとタスク詳細に出す「完了した数 / 全体の数」は保存せず、表示するときに subtasks から数える（数を別のカラムに持つと、サブタスクを変えるたびに更新が必要になり、ずれる原因になるため） |
 | 削除 | プロジェクトを削除すると、その中のステータス・タスク・サブタスクもまとめて削除する。タスクを削除すると、そのサブタスクもまとめて削除する |
+| 削除の順番 | projects と statuses はお互いを参照しているので、プロジェクトを削除するときは、先に `default_status_id` と `done_status_id` を空にしてから、サブタスク → タスク → ステータス → プロジェクトの順に消す |
 | データの範囲 | ユーザーは、自分の `user_id` を持つプロジェクトと、その中のデータだけを扱える |
