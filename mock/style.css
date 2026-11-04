@@ -258,7 +258,27 @@ textarea.input { resize: vertical; min-height: 90px; }
   margin-top: 2px;
 }
 .card-alert { margin-top: 6px; }
-.card-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+
+/* サブタスクの数（完了した数 / 全体の数） */
+.sub-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sub-count-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 9px;
+  line-height: 1;
+}
 
 .card-list { display: flex; flex-direction: column; gap: 8px; }
 .empty { color: var(--muted); padding: 16px 4px; }
@@ -340,6 +360,17 @@ textarea.input { resize: vertical; min-height: 90px; }
 .cal-cell { background: var(--surface); min-height: 96px; padding: 4px; min-width: 0; }
 .cal-cell.blank { background: #f8f9fb; }
 .cal-date { font-size: 12px; color: var(--muted); }
+/* 日付の数字。今日は基本色の丸で塗り、文字を白にする（PC・スマホ共通） */
+.cal-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border: 2px solid transparent;
+  border-radius: 11px;
+}
+.cal-cell.today .cal-num { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
 .cal-task {
   margin-top: 3px;
   padding: 1px 6px;
@@ -362,8 +393,10 @@ textarea.input { resize: vertical; min-height: 90px; }
   cursor: pointer;
 }
 .cal-grid.sp .cal-cell.blank { cursor: default; }
-.cal-grid.sp .cal-date { display: inline-block; min-width: 24px; border-radius: 12px; }
-.cal-grid.sp .cal-cell.selected .cal-date { background: var(--primary); color: #fff; font-weight: 700; }
+.cal-grid.sp .cal-num { min-width: 26px; height: 26px; border-radius: 13px; }
+/* スマホで選択中の日付は、基本色の枠線の丸（今日を選んでいるときは上の塗った丸のまま） */
+.cal-grid.sp .cal-cell.selected .cal-num { border-color: var(--primary); color: var(--primary); font-weight: 700; }
+.cal-grid.sp .cal-cell.today.selected .cal-num { color: #fff; }
 .cal-marks { display: flex; justify-content: center; gap: 3px; margin-top: 3px; flex-wrap: wrap; }
 .mark { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
 .mark.red { background: var(--red); }
@@ -421,7 +454,9 @@ dialog.confirm { width: min(400px, calc(100vw - 32px)); }
   padding: 4px 0;
 }
 .sub-item.dragging { opacity: .4; }
-.handle { cursor: grab; color: var(--muted); padding: 0 4px; user-select: none; font-weight: 700; }
+/* つまみ。touch-action: none で、指で動かしたときに画面がスクロールしないようにする */
+.handle { cursor: grab; color: var(--muted); padding: 0 4px; user-select: none; -webkit-user-select: none; touch-action: none; font-weight: 700; }
+@media (pointer: coarse) { .handle { padding: 6px 10px; } } /* 指で押しやすい大きさ */
 .sub-text { flex: 1; cursor: text; padding: 2px 4px; border-radius: 4px; word-break: break-all; }
 .sub-text:hover { background: #f0f1f4; }
 .sub-item.done .sub-text { color: var(--muted); text-decoration: line-through; }
