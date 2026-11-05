@@ -4,6 +4,8 @@ import { formatDueDate } from './formatDueDate'
 
 type Props = {
   task: Task
+  /** カードを押したとき。タスク詳細を開く */
+  onClick?: () => void
 }
 
 /** 緊急度ごとの、バッジの文字とカードの見た目。通常は何も出さない（機能設計 F-11）。 */
@@ -18,26 +20,32 @@ const urgencyStyles: Record<
 
 /**
  * ボードのカード。緊急度（左端の色帯とタイトル前のバッジ）、タイトル（長いものは省略）、期限を出す。
+ * 押す（キーボードでは Enter・Space）とタスク詳細を開く。
  */
-function TaskCard({ task }: Props) {
+function TaskCard({ task, onClick }: Props) {
   const urgency = urgencyStyles[task.urgency]
 
   return (
-    <li
-      className={urgency ? `${styles.card} ${urgency.className}` : styles.card}
-      title={task.title}
-    >
-      <div className={styles.titleRow}>
-        {urgency && (
-          <span className={styles.badge}>
-            {/* 読み上げのときに、何の「高」「中」かがわかるようにする */}
-            <span className={styles.srOnly}>緊急度</span>
-            {urgency.label}
-          </span>
-        )}
-        <span className={styles.title}>{task.title}</span>
-      </div>
-      <div className={styles.meta}>{formatDueDate(task.dueDate)}</div>
+    <li className={styles.item} title={task.title}>
+      <button
+        type="button"
+        className={
+          urgency ? `${styles.card} ${urgency.className}` : styles.card
+        }
+        onClick={onClick}
+      >
+        <div className={styles.titleRow}>
+          {urgency && (
+            <span className={styles.badge}>
+              {/* 読み上げのときに、何の「高」「中」かがわかるようにする */}
+              <span className={styles.srOnly}>緊急度</span>
+              {urgency.label}
+            </span>
+          )}
+          <span className={styles.title}>{task.title}</span>
+        </div>
+        <div className={styles.meta}>{formatDueDate(task.dueDate)}</div>
+      </button>
     </li>
   )
 }

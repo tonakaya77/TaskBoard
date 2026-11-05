@@ -1,5 +1,16 @@
 /* モック（mock/style.css）の .card・.card-board と同じ見た目 */
+.item {
+  list-style: none;
+}
+
+/* カード全体を押せるボタンにする。ボタンの既定の見た目は消す */
 .card {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -9,6 +20,11 @@
 
 .card:hover {
   border-color: #b3bac5;
+}
+
+.card:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
 }
 
 /* 緊急度の色帯（カードの左端）。高は赤、中は黄（機能設計 F-11） */

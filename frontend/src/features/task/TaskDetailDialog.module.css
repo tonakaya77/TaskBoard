@@ -1,0 +1,81 @@
+/* モック（mock/style.css）の .detail-title・.detail-meta・.detail-due・.detail-desc と同じ見た目 */
+.summary {
+  flex: 1;
+  min-width: 0;
+}
+
+/* タイトルは省略せず、全部表示する */
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  line-height: 32px;
+  word-break: break-all;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+/* プロジェクトの色。モックの .dot と同じ */
+.dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.due {
+  margin-top: 4px;
+}
+
+.sectionHeading {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+/* 改行をそのまま出す */
+.description {
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* 緊急度のバッジ。ボードのカード（TaskCard.module.css）と同じ形と色 */
+.badge {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.high {
+  color: var(--red);
+  background: var(--red-bg);
+}
+
+.medium {
+  color: var(--yellow);
+  background: var(--yellow-bg);
+}
+
+/* 画面には出さず、読み上げのときだけ読む文字 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
