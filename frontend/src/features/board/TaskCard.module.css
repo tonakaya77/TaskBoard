@@ -1,6 +1,8 @@
 /* モック（mock/style.css）の .card・.card-board と同じ見た目 */
+/* カードの間隔。ドラッグ中の位置計算がずれないよう、gap ではなく margin で空ける */
 .item {
   list-style: none;
+  margin-bottom: 8px;
 }
 
 /* カード全体を押せるボタンにする。ボタンの既定の見た目は消す */
@@ -20,6 +22,10 @@
 
 .card:hover {
   border-color: #b3bac5;
+}
+
+.dragging {
+  box-shadow: 0 6px 16px rgba(9, 30, 66, 0.25);
 }
 
 .card:focus-visible {

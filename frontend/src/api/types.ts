@@ -51,5 +51,13 @@ export type CreateTaskInput = {
   statusId: number
 }
 
+/** タスクを移すときに送る JSON。backend の MoveTaskRequest.java */
+export type MoveTaskInput = {
+  /** 移った先のステータス。同じ列の中で並べ替えるときは、いまのステータス */
+  statusId: number
+  /** 移った先の列の中での位置（0 始まり）。動かすタスク自身を除いた並びに差し込む */
+  index: number
+}
+
 /** タスクを更新するときに送る JSON。backend の UpdateTaskRequest.java。項目は登録と同じで、すべて送る */
 export type UpdateTaskInput = CreateTaskInput

@@ -15,11 +15,16 @@
 .cardList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   min-height: 40px;
   margin: 0;
   padding: 0;
   list-style: none;
+  border-radius: var(--radius);
+}
+
+/* カードを持って列の上に来ているとき */
+.over {
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .message {

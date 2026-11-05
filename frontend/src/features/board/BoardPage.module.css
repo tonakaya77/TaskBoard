@@ -34,3 +34,12 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* カードを移動できなかったときのお知らせ。ダイアログの .errorBox と同じ見た目 */
+.error {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  color: var(--danger);
+  background: var(--red-bg);
+  border-radius: var(--radius);
+}

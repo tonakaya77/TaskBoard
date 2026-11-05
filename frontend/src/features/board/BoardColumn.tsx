@@ -1,3 +1,4 @@
+import { Droppable } from '@hello-pangea/dnd'
 import { useQuery } from '@tanstack/react-query'
 import { getTasksByStatus } from '../../api/tasks'
 import type { Status } from '../../api/types'
@@ -34,15 +35,30 @@ function BoardColumn({ status, onOpenTask }: Props) {
         </p>
       )}
       {tasks && (
-        <ul className={styles.cardList}>
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={() => onOpenTask(task.id)}
-            />
-          ))}
-        </ul>
+        // カードを落とせる場所。droppableId は列（ステータス）の ID
+        <Droppable droppableId={String(status.id)}>
+          {(provided, snapshot) => (
+            <ul
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={
+                snapshot.isDraggingOver
+                  ? `${styles.cardList} ${styles.over}`
+                  : styles.cardList
+              }
+            >
+              {tasks.map((task, index) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  onClick={() => onOpenTask(task.id)}
+                />
+              ))}
+              {provided.placeholder}
+            </ul>
+          )}
+        </Droppable>
       )}
     </section>
   )
