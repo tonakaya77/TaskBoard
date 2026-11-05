@@ -1,6 +1,20 @@
-import type { Status, Task } from '../api/types'
+import type { Project, Status, Task } from '../api/types'
 
 // テスト用のデータを作る。必要な項目だけ上書きする。
+
+export function makeProject(overrides: Partial<Project> = {}): Project {
+  return {
+    id: 1,
+    userId: 1,
+    title: '課題',
+    color: '#3B82F6',
+    defaultStatusId: 1,
+    doneStatusId: 4,
+    createdAt: '2026-11-01T00:00:00Z',
+    updatedAt: '2026-11-01T00:00:00Z',
+    ...overrides,
+  }
+}
 
 export function makeStatus(overrides: Partial<Status> = {}): Status {
   return {
