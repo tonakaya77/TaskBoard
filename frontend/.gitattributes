@@ -1,0 +1,2 @@
+# Prettier に合わせて、改行コードを LF にそろえる
+* text=auto eol=lf

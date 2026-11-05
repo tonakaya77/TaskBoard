@@ -22,8 +22,13 @@ body {
 
 body {
   font-family:
-    system-ui, -apple-system, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI',
-    'Meiryo', sans-serif;
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    'Hiragino Sans',
+    'Yu Gothic UI',
+    'Meiryo',
+    sans-serif;
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
