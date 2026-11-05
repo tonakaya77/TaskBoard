@@ -12,6 +12,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
 const isWindows = process.platform === 'win32'
@@ -26,16 +27,43 @@ function readPort(relativePath, pattern, fallback) {
   }
 }
 
-/** コマンドから、起動するサーバーとそのポートを決める。 */
-function targetsOf(command) {
+/**
+ * コマンドを、実際に実行する部分ごとに分ける。
+ * 文字として渡しているだけの部分（ヒアドキュメントの本文、引用符の中身）は先に取り除く。
+ * そうしないと、gh issue create の本文に起動コマンドの文字があるだけで、起動と見なしてしまう。
+ */
+export function commandSegments(command) {
+  const code = command
+    // ヒアドキュメントの本文（<<'EOF' ～ EOF、<<-EOF、<<"EOF" など）
+    .replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?(\n[ \t]*\2[ \t]*(?=\n|$)|$)/g, '\n')
+    // PowerShell のヒアストリング（@' ～ '@、@" ～ "@）
+    .replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '')
+    // 引用符の中身
+    .replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, '""')
+  return code
+    .split(/&&|\|\||[;|&\n]/)
+    .map((segment) =>
+      segment
+        .trim()
+        // サブシェルの括弧と、先頭の環境変数の指定（FOO=bar）は飛ばす
+        .replace(/^\(+\s*/, '')
+        .replace(/^(\w+=\S*\s+)+/, ''),
+    )
+    .filter(Boolean)
+}
+
+/** コマンドから、起動するサーバーとそのポートを決める。部分の先頭にある起動コマンドだけを見る。 */
+export function targetsOf(command) {
+  const segments = commandSegments(command)
+  const starts = (pattern) => segments.some((segment) => pattern.test(segment))
   const targets = []
-  if (/\bgradlew(\.bat)?\b[^\n;&|]*\bbootRun\b/.test(command)) {
+  if (starts(/^(\S*[\\/])?gradlew(\.bat)?\s+(\S+\s+)*bootRun\b/)) {
     targets.push({
       name: 'バックエンド（Spring Boot）',
       port: readPort('backend/src/main/resources/application.properties', /^server\.port\s*=\s*(\d+)/m, 8080),
     })
   }
-  if (/\bnpm\s+run\s+dev\b|\bnpx\s+vite\b(?!\s+(build|preview)\b)/.test(command)) {
+  if (starts(/^npm(\.cmd)?\s+run\s+dev\b/) || starts(/^npx(\.cmd)?\s+vite\b(?!\s+(build|preview)\b)/)) {
     targets.push({
       name: 'フロントエンド（Vite）',
       port: readPort('frontend/vite.config.ts', /server\s*:\s*\{[^}]*?\bport\s*:\s*(\d+)/s, 5173),
@@ -125,9 +153,12 @@ function main() {
   }
 }
 
-try {
-  main()
-} catch (e) {
-  process.stderr.write(`free-dev-port: ${e.message}\n`)
+// テスト（free-dev-port.test.mjs）から読み込んだときは動かさない
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  try {
+    main()
+  } catch (e) {
+    process.stderr.write(`free-dev-port: ${e.message}\n`)
+  }
+  process.exit(0)
 }
-process.exit(0)
