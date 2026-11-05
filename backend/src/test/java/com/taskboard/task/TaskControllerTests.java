@@ -2,6 +2,8 @@ package com.taskboard.task;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -23,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.taskboard.TestcontainersConfiguration;
 
 /**
- * タスクを読み取る API、登録する API、更新する API、移動する API のテスト。
+ * タスクを読み取る API、登録する API、更新する API、移動する API、削除する API のテスト。
  * 各テストはトランザクションの中で動き、終わったら元に戻る。
  */
 @SpringBootTest
@@ -430,6 +432,39 @@ class TaskControllerTests {
 	@Test
 	void moveReturns404WhenTaskDoesNotExist() throws Exception {
 		moveTask(reportTaskId + 1000, statusA, 0).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deleteReturns204AndRemovesTask() throws Exception {
+		mockMvc.perform(delete("/api/tasks/{id}", reportTaskId))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/tasks/{id}", reportTaskId)).andExpect(status().isNotFound());
+		// ほかのタスクは残っている
+		assertColumn(statusA, "資料作成");
+		assertColumn(statusB, "買い物");
+	}
+
+	@Test
+	void deleteAlsoRemovesSubtasks() throws Exception {
+		jdbc.sql("INSERT INTO subtasks (task_id, title, position) VALUES (?, '構成を考える', 1), (?, '書く', 2)")
+				.params(reportTaskId, reportTaskId).update();
+
+		mockMvc.perform(delete("/api/tasks/{id}", reportTaskId))
+				.andExpect(status().isNoContent());
+
+		long subtasks = jdbc.sql("SELECT COUNT(*) FROM subtasks WHERE task_id = ?")
+				.param(reportTaskId).query(Long.class).single();
+		assertThat(subtasks).isZero();
+	}
+
+	@Test
+	void deleteReturns404WhenTaskDoesNotExist() throws Exception {
+		mockMvc.perform(delete("/api/tasks/{id}", reportTaskId + 1000))
+				.andExpect(status().isNotFound());
+
+		// 何も消えていない
+		mockMvc.perform(get("/api/tasks")).andExpect(jsonPath("$", hasSize(3)));
 	}
 
 	private ResultActions moveTask(long id, long statusId, int index) throws Exception {
