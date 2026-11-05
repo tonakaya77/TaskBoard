@@ -89,6 +89,7 @@ function BoardPage() {
             <BoardColumn
               key={status.id}
               status={status}
+              doneStatusId={project?.doneStatusId ?? null}
               onOpenTask={setDetailTaskId}
             />
           ))}

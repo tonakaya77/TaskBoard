@@ -12,6 +12,8 @@ type Props = {
   task: Task
   /** 列の中での位置（0 始まり）。ドラッグ＆ドロップで使う */
   index: number
+  /** プロジェクトの完了ステータス。このステータスのタスクには緊急度を出さない */
+  doneStatusId: number | null
   /** カードを押したとき。タスク詳細を開く */
   onClick?: () => void
 }
@@ -28,9 +30,8 @@ const urgencyClassNames: Record<BadgeUrgency, string> = {
  * ドラッグ＆ドロップで、別の列へ移したり同じ列の中で並べ替えたりできる（F-05）。
  * キーボードでは Space で持ち上げ、矢印キーで動かし、Space で置く。
  */
-function TaskCard({ task, index, onClick }: Props) {
-  // 完了ステータスかどうかは、まだ見ていない（#33）
-  const urgency = badgeUrgency(task, null)
+function TaskCard({ task, index, doneStatusId, onClick }: Props) {
+  const urgency = badgeUrgency(task, doneStatusId)
 
   return (
     <Draggable

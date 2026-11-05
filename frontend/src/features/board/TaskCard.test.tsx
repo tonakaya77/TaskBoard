@@ -6,13 +6,20 @@ import { makeTask } from '../../test/fixtures'
 import TaskCard from './TaskCard'
 
 /** カードはドラッグ＆ドロップの列の中でしか描けないので、列で包んで描く */
+const DONE_STATUS_ID = 4
+
 function renderCard(task: Task, onClick?: () => void) {
   render(
     <DragDropContext onDragEnd={() => {}}>
       <Droppable droppableId="1">
         {(provided) => (
           <ul ref={provided.innerRef} {...provided.droppableProps}>
-            <TaskCard task={task} index={0} onClick={onClick} />
+            <TaskCard
+              task={task}
+              index={0}
+              doneStatusId={DONE_STATUS_ID}
+              onClick={onClick}
+            />
             {provided.placeholder}
           </ul>
         )}
@@ -55,6 +62,34 @@ describe('TaskCard', () => {
 
     expect(screen.queryByText('緊急度')).not.toBeInTheDocument()
     expect(screen.getByRole('listitem')).toHaveTextContent(/^掃除/)
+  })
+
+  it('完了ステータスのタスクには、緊急度が高でもバッジと色帯を出さない', () => {
+    renderCard(
+      makeTask({
+        title: '参考書を買う',
+        urgency: 'HIGH',
+        statusId: DONE_STATUS_ID,
+      }),
+    )
+
+    expect(screen.queryByText('緊急度')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /参考書を買う/ }),
+    ).not.toHaveClass(/high/)
+  })
+
+  it('完了以外のステータスに戻すと、また緊急度を出す', () => {
+    renderCard(
+      makeTask({ title: '参考書を買う', urgency: 'HIGH', statusId: 2 }),
+    )
+
+    expect(screen.getByRole('listitem')).toHaveTextContent(
+      '緊急度高参考書を買う',
+    )
+    expect(screen.getByRole('button', { name: /参考書を買う/ })).toHaveClass(
+      /high/,
+    )
   })
 
   it('押すと onClick を呼ぶ', () => {
