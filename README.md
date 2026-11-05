@@ -43,3 +43,22 @@ curl http://localhost:8080/api/projects/1/statuses
 | ユーザー / パスワード | `taskboard` / `taskboard` |
 
 データベースのツールからも、この値でつなげる。アプリの接続先は環境変数 `DB_URL`・`DB_USERNAME`・`DB_PASSWORD` で変えられる。
+
+## フロントエンド（`frontend/`）
+
+React 19（TypeScript）/ Vite。Node.js 24 以上を入れておく。
+
+```sh
+cd frontend
+npm install    # 初回と、package.json が変わったとき
+npm run dev    # http://localhost:5173 で開く
+```
+
+画面は API を使うので、先にバックエンド（`./gradlew bootRun`）を起動しておく。開発中は `/api` へのリクエストを Vite が http://localhost:8080 へ転送する（`vite.config.ts`）。
+
+| コマンド | 内容 |
+|---|---|
+| `npm test` | テスト（Vitest ＋ React Testing Library） |
+| `npm run lint` | ESLint でチェック |
+| `npm run format` | Prettier で整形（`npm run format:check` は確かめるだけ） |
+| `npm run build` | 型チェックとビルド（`dist/` に出る） |
