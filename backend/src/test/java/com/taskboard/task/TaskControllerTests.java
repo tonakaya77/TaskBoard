@@ -48,8 +48,8 @@ class TaskControllerTests {
 		long statusB = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectB + ", '未着手', 1) RETURNING id");
 
 		reportTaskId = jdbc.sql("""
-				INSERT INTO tasks (project_id, status_id, title, description, due_date, position)
-				VALUES (?, ?, 'レポート提出', '第3回課題', '2026-11-01', 1) RETURNING id
+				INSERT INTO tasks (project_id, status_id, title, description, due_date, urgency, position)
+				VALUES (?, ?, 'レポート提出', '第3回課題', '2026-11-01', 'HIGH', 1) RETURNING id
 				""").params(projectA, statusA).query(Long.class).single();
 		insertTask(projectA, statusA, "資料作成", 2);
 		insertTask(projectB, statusB, "買い物", 1);
@@ -60,7 +60,9 @@ class TaskControllerTests {
 		mockMvc.perform(get("/api/tasks"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(3)))
-				.andExpect(jsonPath("$[*].title").value(contains("レポート提出", "資料作成", "買い物")));
+				.andExpect(jsonPath("$[*].title").value(contains("レポート提出", "資料作成", "買い物")))
+				// 緊急度を指定しなかったタスクは、初期値の NORMAL になる
+				.andExpect(jsonPath("$[*].urgency").value(contains("HIGH", "NORMAL", "NORMAL")));
 	}
 
 	@Test
@@ -71,6 +73,7 @@ class TaskControllerTests {
 		mockMvc.perform(get("/api/tasks/status/{statusId}", statusA))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[*].title").value(contains("割り込み", "レポート提出", "資料作成")))
+				.andExpect(jsonPath("$[*].urgency").value(contains("NORMAL", "HIGH", "NORMAL")))
 				.andExpect(jsonPath("$[*].statusId").value(contains(
 						(int) statusA, (int) statusA, (int) statusA)));
 	}
@@ -93,6 +96,7 @@ class TaskControllerTests {
 				.andExpect(jsonPath("$.title").value("レポート提出"))
 				.andExpect(jsonPath("$.description").value("第3回課題"))
 				.andExpect(jsonPath("$.dueDate").value("2026-11-01"))
+				.andExpect(jsonPath("$.urgency").value("HIGH"))
 				.andExpect(jsonPath("$.todayDate").doesNotExist());
 	}
 

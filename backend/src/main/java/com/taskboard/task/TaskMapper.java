@@ -11,7 +11,7 @@ public interface TaskMapper {
 
 	/** 全タスクを ID 順に返す。 */
 	@Select("""
-			SELECT id, project_id, status_id, title, description, due_date, position,
+			SELECT id, project_id, status_id, title, description, due_date, urgency, position,
 			       today_date, today_order, created_at, updated_at
 			  FROM tasks
 			 ORDER BY id
@@ -20,7 +20,7 @@ public interface TaskMapper {
 
 	/** ステータス（ボードの列）のタスクを、列の中の並び順に返す。 */
 	@Select("""
-			SELECT id, project_id, status_id, title, description, due_date, position,
+			SELECT id, project_id, status_id, title, description, due_date, urgency, position,
 			       today_date, today_order, created_at, updated_at
 			  FROM tasks
 			 WHERE status_id = #{statusId}
@@ -30,7 +30,7 @@ public interface TaskMapper {
 
 	/** ID でタスクを1件返す。ないときは空。 */
 	@Select("""
-			SELECT id, project_id, status_id, title, description, due_date, position,
+			SELECT id, project_id, status_id, title, description, due_date, urgency, position,
 			       today_date, today_order, created_at, updated_at
 			  FROM tasks
 			 WHERE id = #{id}

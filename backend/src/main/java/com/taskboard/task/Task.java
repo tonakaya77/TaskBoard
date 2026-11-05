@@ -13,6 +13,7 @@ public record Task(
 		String title,
 		String description,
 		LocalDate dueDate,
+		Urgency urgency,
 		Integer position,
 		LocalDate todayDate,
 		Integer todayOrder,
