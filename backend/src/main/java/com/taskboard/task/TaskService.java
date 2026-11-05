@@ -55,12 +55,32 @@ public class TaskService {
 		}
 
 		Urgency urgency = request.urgency() != null ? request.urgency() : Urgency.NORMAL;
-		String description = request.description() == null || request.description().isEmpty()
-				? null
-				: request.description();
 
-		long id = taskMapper.insert(projectId, statusId, request.title().strip(), description,
-				request.dueDate(), urgency);
+		long id = taskMapper.insert(projectId, statusId, request.title().strip(),
+				normalizeDescription(request.description()), request.dueDate(), urgency);
 		return findById(id);
+	}
+
+	/**
+	 * タスクの内容を置き換えて、更新後のタスクを返す（docs/functions.md の UC-10）。
+	 * タスクがないときは TaskNotFoundException、
+	 * ステータスがタスクのプロジェクトのものでないときは InvalidStatusException。
+	 */
+	@Transactional
+	public Task update(long id, UpdateTaskRequest request) {
+		Task task = findById(id);
+		long projectId = task.projectId();
+		if (!statusMapper.existsInProject(projectId, request.statusId())) {
+			throw new InvalidStatusException(projectId, request.statusId());
+		}
+
+		taskMapper.update(id, request.statusId(), request.title().strip(),
+				normalizeDescription(request.description()), request.dueDate(), request.urgency());
+		return findById(id);
+	}
+
+	/** 空の説明は「説明なし」（null）として保存する。 */
+	private static String normalizeDescription(String description) {
+		return description == null || description.isEmpty() ? null : description;
 	}
 }
