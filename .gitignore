@@ -1,0 +1,16 @@
+# リポジトリ全体に効く除外ルール。
+# フロントエンド・バックエンドだけでできるもの（node_modules、build など）は、
+# それぞれの .gitignore（frontend/.gitignore、backend/.gitignore）に書く。
+
+# Claude Code の個人用の設定（共有する設定は .claude/settings.json に書く）
+.claude/settings.local.json
+
+# パスワードなどを書く環境変数のファイル（見本の .env.example だけは共有する）
+.env
+.env.*
+!.env.example
+
+# OS が自動で作るファイル
+.DS_Store
+Thumbs.db
+desktop.ini
