@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.taskboard.TestcontainersConfiguration;
 
 /**
- * タスクを読み取る API と、タスクを登録する API のテスト。
+ * タスクを読み取る API、登録する API、更新する API のテスト。
  * 各テストはトランザクションの中で動き、終わったら元に戻る。
  */
 @SpringBootTest
@@ -212,6 +213,125 @@ class TaskControllerTests {
 				{"title": "どこにもない", "statusId": %d}
 				""".formatted(statusA))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void updateReplacesAllFields() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "  レポート再提出  ", "description": "", "dueDate": null,
+				 "urgency": "NORMAL", "statusId": %d}
+				""".formatted(statusA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(reportTaskId))
+				// 前後の空白は除き、空の説明はなしにする
+				.andExpect(jsonPath("$.title").value("レポート再提出"))
+				.andExpect(jsonPath("$.description").doesNotExist())
+				.andExpect(jsonPath("$.dueDate").doesNotExist())
+				.andExpect(jsonPath("$.urgency").value("NORMAL"))
+				.andExpect(jsonPath("$.statusId").value(statusA))
+				// 同じステータスなので、並び順は変わらない
+				.andExpect(jsonPath("$.position").value(1));
+
+		mockMvc.perform(get("/api/tasks/{id}", reportTaskId))
+				.andExpect(jsonPath("$.title").value("レポート再提出"));
+	}
+
+	@Test
+	void updateMovesTaskToBottomOfNewColumnWhenStatusChanges() throws Exception {
+		long doingStatus = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '進行中', 2) RETURNING id");
+		insertTask(projectA, doingStatus, "調べもの", 5);
+
+		putTask(reportTaskId, """
+				{"title": "レポート提出", "description": "第3回課題", "dueDate": "2026-11-01",
+				 "urgency": "HIGH", "statusId": %d}
+				""".formatted(doingStatus))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.statusId").value(doingStatus))
+				// 移った先の列の一番下（いまの一番下は 5）
+				.andExpect(jsonPath("$.position").value(6));
+
+		mockMvc.perform(get("/api/tasks/status/{statusId}", doingStatus))
+				.andExpect(jsonPath("$[*].title").value(contains("調べもの", "レポート提出")));
+		mockMvc.perform(get("/api/tasks/status/{statusId}", statusA))
+				.andExpect(jsonPath("$[*].title").value(contains("資料作成")));
+	}
+
+	@Test
+	void updateMovesTaskToTopWhenNewColumnIsEmpty() throws Exception {
+		long emptyStatus = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '完了', 2) RETURNING id");
+
+		putTask(reportTaskId, """
+				{"title": "レポート提出", "urgency": "HIGH", "statusId": %d}
+				""".formatted(emptyStatus))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.position").value(1));
+	}
+
+	@Test
+	void updateReturns400WhenTitleIsBlank() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "   ", "urgency": "HIGH", "statusId": %d}
+				""".formatted(statusA))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateReturns400WhenTitleIsTooLong() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "%s", "urgency": "HIGH", "statusId": %d}
+				""".formatted("あ".repeat(51), statusA))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateReturns400WhenDescriptionIsTooLong() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "長い説明", "description": "%s", "urgency": "HIGH", "statusId": %d}
+				""".formatted("い".repeat(1001), statusA))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateReturns400WhenUrgencyIsOmitted() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "緊急度なし", "statusId": %d}
+				""".formatted(statusA))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateReturns400WhenStatusIsOmitted() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "ステータスなし", "urgency": "HIGH"}
+				""")
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateReturns400WhenStatusBelongsToAnotherProject() throws Exception {
+		putTask(reportTaskId, """
+				{"title": "別の列", "urgency": "HIGH", "statusId": %d}
+				""".formatted(statusB))
+				.andExpect(status().isBadRequest());
+
+		// 更新されていない
+		mockMvc.perform(get("/api/tasks/{id}", reportTaskId))
+				.andExpect(jsonPath("$.title").value("レポート提出"))
+				.andExpect(jsonPath("$.statusId").value(statusA));
+	}
+
+	@Test
+	void updateReturns404WhenTaskDoesNotExist() throws Exception {
+		putTask(reportTaskId + 1000, """
+				{"title": "どこにもない", "urgency": "HIGH", "statusId": %d}
+				""".formatted(statusA))
+				.andExpect(status().isNotFound());
+	}
+
+	private ResultActions putTask(long id, String json) throws Exception {
+		return mockMvc.perform(put("/api/tasks/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json));
 	}
 
 	private ResultActions postTask(long projectId, String json) throws Exception {
