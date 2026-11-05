@@ -1,0 +1,25 @@
+/* モック（mock/style.css）の .card・.card-board と同じ見た目 */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: 0 1px 1px rgba(9, 30, 66, 0.08);
+}
+
+.card:hover {
+  border-color: #b3bac5;
+}
+
+.title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}

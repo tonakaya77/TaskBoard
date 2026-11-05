@@ -1,0 +1,8 @@
+/* モック（mock/style.css）の .board と同じ。列が多いときは横にスクロールする */
+.board {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
