@@ -70,6 +70,21 @@
   background: var(--yellow-bg);
 }
 
+/* 左下に「削除」、右下に「編集」（モックの .dlg-foot と .spacer） */
+.foot {
+  justify-content: space-between;
+}
+
+/* 削除ボタンは赤い文字（モックの .btn-danger-text） */
+.danger {
+  color: var(--danger);
+}
+
+.danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* 画面には出さず、読み上げのときだけ読む文字 */
 .srOnly {
   position: absolute;
