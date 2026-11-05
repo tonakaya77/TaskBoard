@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useId, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
+import { queryKeys } from '../../api/queryKeys'
 import { createTask, updateTask } from '../../api/tasks'
 import type { Project, Status, Task, Urgency } from '../../api/types'
 import styles from './TaskFormDialog.module.css'
+import { URGENCIES, URGENCY_LABELS } from './urgency'
 
 type Props = {
   project: Project
@@ -24,13 +26,6 @@ type Errors = {
   title?: string
   description?: string
 }
-
-/** 緊急度のボタン。左から高・中・通常（画面設計 S-06） */
-const URGENCY_OPTIONS: { value: Urgency; label: string }[] = [
-  { value: 'HIGH', label: '高' },
-  { value: 'MEDIUM', label: '中' },
-  { value: 'NORMAL', label: '通常' },
-]
 
 /** 文字の入力欄のチェック。モック（mock/app.js の validateText）と同じ文言 */
 function validateText(
@@ -98,7 +93,7 @@ function TaskFormDialog({ project, statuses, task, onClose }: Props) {
     onSuccess: async () => {
       // ステータスを変えたときは移る前と後の両方の列が変わるので、
       // タスクに関するもの（列・タスク詳細）をまとめて読み直す
-      await queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tasks })
       onClose()
     },
   })
@@ -125,7 +120,7 @@ function TaskFormDialog({ project, statuses, task, onClose }: Props) {
     onClose()
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const next = validate(form)
     setErrors(next)
@@ -237,15 +232,16 @@ function TaskFormDialog({ project, statuses, task, onClose }: Props) {
               aria-labelledby={urgencyLabelId}
               className={styles.urgency}
             >
-              {URGENCY_OPTIONS.map((option) => (
+              {/* 左から高・中・通常（画面設計 S-06） */}
+              {URGENCIES.map((urgency) => (
                 <button
-                  key={option.value}
+                  key={urgency}
                   type="button"
                   className={styles.button}
-                  aria-pressed={form.urgency === option.value}
-                  onClick={() => update('urgency', option.value)}
+                  aria-pressed={form.urgency === urgency}
+                  onClick={() => update('urgency', urgency)}
                 >
-                  {option.label}
+                  {URGENCY_LABELS[urgency]}
                 </button>
               ))}
             </div>

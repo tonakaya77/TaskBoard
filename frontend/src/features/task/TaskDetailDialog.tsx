@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useRef } from 'react'
 import { deleteTask, getTask } from '../../api/tasks'
-import type { Project, Status, Task, Urgency } from '../../api/types'
+import { queryKeys } from '../../api/queryKeys'
+import type { Project, Status, Task } from '../../api/types'
 import { formatDueDate } from '../board/formatDueDate'
 import styles from './TaskDetailDialog.module.css'
 // ダイアログの枠・ボタンの見た目は、タスク作成・編集ダイアログと揃える
 import dialogStyles from './TaskFormDialog.module.css'
+import { type BadgeUrgency, URGENCY_LABELS, badgeUrgency } from './urgency'
 
 type Props = {
   taskId: number
@@ -15,14 +17,10 @@ type Props = {
   onClose: () => void
 }
 
-/** 緊急度のバッジ。通常は出さない（機能設計 F-11） */
-const urgencyBadges: Record<
-  Urgency,
-  { label: string; className: string } | null
-> = {
-  HIGH: { label: '高', className: styles.high },
-  MEDIUM: { label: '中', className: styles.medium },
-  NORMAL: null,
+/** 緊急度ごとの、バッジの色 */
+const badgeClassNames: Record<BadgeUrgency, string> = {
+  HIGH: styles.high,
+  MEDIUM: styles.medium,
 }
 
 /**
@@ -41,13 +39,13 @@ function TaskDetailDialog({
   const headingId = useId()
   const queryClient = useQueryClient()
 
-  // 編集で保存したあとに読み直されるよう、キーは ['tasks', …] の下に置く
+  // 編集で保存したあとに読み直されるよう、キーは queryKeys.tasks の下にある
   const {
     data: task,
     isPending,
     isError,
   } = useQuery({
-    queryKey: ['tasks', taskId],
+    queryKey: queryKeys.task(taskId),
     queryFn: () => getTask(taskId),
   })
 
@@ -56,7 +54,7 @@ function TaskDetailDialog({
     onSuccess: () => {
       // 先に閉じてから読み直す。開いたままだと、消したタスクの詳細まで読み直して 404 になる
       onClose()
-      void queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks })
     },
   })
 
@@ -70,11 +68,8 @@ function TaskDetailDialog({
   }, [])
 
   const statusName = statuses.find((s) => s.id === task?.statusId)?.name
-  // 完了ステータスのタスクには、緊急度を出さない
-  const badge =
-    task && task.statusId !== project.doneStatusId
-      ? urgencyBadges[task.urgency]
-      : null
+  // 通常と、完了ステータスのタスクには、緊急度を出さない
+  const badge = task ? badgeUrgency(task, project.doneStatusId) : null
 
   return (
     <dialog
@@ -91,9 +86,9 @@ function TaskDetailDialog({
           <div className={styles.summary}>
             <h2 id={headingId} className={styles.title}>
               {badge && (
-                <span className={`${styles.badge} ${badge.className}`}>
+                <span className={`${styles.badge} ${badgeClassNames[badge]}`}>
                   <span className={styles.srOnly}>緊急度</span>
-                  {badge.label}
+                  {URGENCY_LABELS[badge]}
                 </span>
               )}
               {task ? task.title : 'タスク詳細'}

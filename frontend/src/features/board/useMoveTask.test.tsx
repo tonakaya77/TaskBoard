@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { queryKeys } from '../../api/queryKeys'
 import type { Task } from '../../api/types'
 import { makeTask } from '../../test/fixtures'
 import { useMoveTask } from './useMoveTask'
@@ -32,8 +33,8 @@ function setup(status = 200) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   })
-  queryClient.setQueryData(['tasks', 'status', 1], [a, b])
-  queryClient.setQueryData(['tasks', 'status', 2], [x])
+  queryClient.setQueryData(queryKeys.tasksByStatus(1), [a, b])
+  queryClient.setQueryData(queryKeys.tasksByStatus(2), [x])
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -42,7 +43,7 @@ function setup(status = 200) {
 
   function column(statusId: number) {
     return queryClient
-      .getQueryData<Task[]>(['tasks', 'status', statusId])
+      .getQueryData<Task[]>(queryKeys.tasksByStatus(statusId))
       ?.map((t) => t.title)
   }
 

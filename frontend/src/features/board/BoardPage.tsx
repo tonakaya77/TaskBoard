@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import { getProject } from '../../api/projects'
+import { queryKeys } from '../../api/queryKeys'
 import { getStatuses } from '../../api/statuses'
 import type { Task } from '../../api/types'
 import TaskDetailDialog from '../task/TaskDetailDialog'
@@ -31,14 +32,14 @@ function BoardPage() {
     isPending,
     isError,
   } = useQuery({
-    queryKey: ['statuses', projectId],
+    queryKey: queryKeys.statuses(projectId),
     queryFn: () => getStatuses(projectId),
   })
 
   // タスク作成ダイアログのステータスの初期値（初期ステータス）と、
   // タスク詳細のプロジェクト名・完了ステータスの判断に使う
   const { data: project } = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => getProject(projectId),
   })
 
