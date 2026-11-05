@@ -3,14 +3,24 @@ import { useState } from 'react'
 import { useParams } from 'react-router'
 import { getProject } from '../../api/projects'
 import { getStatuses } from '../../api/statuses'
+import type { Task } from '../../api/types'
+import TaskDetailDialog from '../task/TaskDetailDialog'
 import TaskFormDialog from '../task/TaskFormDialog'
 import BoardColumn from './BoardColumn'
 import styles from './BoardPage.module.css'
 
-/** ボード画面（S-03）。プロジェクトのステータスを列として並べる。 */
+/**
+ * ボード画面（S-03）。プロジェクトのステータスを列として並べる。
+ * カードを押すとタスク詳細（S-05）を開き、「編集」でタスク作成・編集（S-06）に切り替える。
+ * 編集を閉じると（保存でもキャンセルでも）タスク詳細に戻る（UC-10）。
+ */
 function BoardPage() {
   const projectId = Number(useParams().projectId)
   const [isCreating, setIsCreating] = useState(false)
+  // タスク詳細で開いているタスク
+  const [detailTaskId, setDetailTaskId] = useState<number | null>(null)
+  // 編集しているタスク。編集のあいだは、タスク詳細を隠す
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const {
     data: statuses,
@@ -21,7 +31,8 @@ function BoardPage() {
     queryFn: () => getStatuses(projectId),
   })
 
-  // タスク作成ダイアログで、ステータスの初期値（初期ステータス）を決めるのに使う
+  // タスク作成ダイアログのステータスの初期値（初期ステータス）と、
+  // タスク詳細のプロジェクト名・完了ステータスの判断に使う
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
@@ -44,7 +55,11 @@ function BoardPage() {
       </div>
       <div className={styles.board}>
         {statuses.map((status) => (
-          <BoardColumn key={status.id} status={status} />
+          <BoardColumn
+            key={status.id}
+            status={status}
+            onOpenTask={setDetailTaskId}
+          />
         ))}
       </div>
       {isCreating && project && (
@@ -52,6 +67,23 @@ function BoardPage() {
           project={project}
           statuses={statuses}
           onClose={() => setIsCreating(false)}
+        />
+      )}
+      {detailTaskId !== null && !editingTask && project && (
+        <TaskDetailDialog
+          taskId={detailTaskId}
+          project={project}
+          statuses={statuses}
+          onEdit={setEditingTask}
+          onClose={() => setDetailTaskId(null)}
+        />
+      )}
+      {editingTask && project && (
+        <TaskFormDialog
+          project={project}
+          statuses={statuses}
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
         />
       )}
     </>

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { Task } from '../../api/types'
 import { makeProject, makeStatus, makeTask } from '../../test/fixtures'
 import TaskFormDialog from './TaskFormDialog'
 
@@ -21,7 +22,26 @@ function mockCreateApi(status = 201) {
   return fetchMock
 }
 
-function renderDialog() {
+/** タスクの更新 API を差し替える。送った JSON をそのままタスクにして返す。 */
+function mockUpdateApi() {
+  const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body))
+    return Response.json(makeTask({ id: 7, ...body }))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+const editingTask = makeTask({
+  id: 7,
+  statusId: 3,
+  title: 'レポート提出',
+  description: '第3回課題',
+  dueDate: '2026-11-01',
+  urgency: 'MEDIUM',
+})
+
+function renderDialog(task?: Task) {
   const onClose = vi.fn()
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
@@ -32,6 +52,7 @@ function renderDialog() {
         // 初期ステータスは、並び順の1番目ではなく ID で決まる
         project={makeProject({ id: 1, defaultStatusId: 2 })}
         statuses={statuses}
+        task={task}
         onClose={onClose}
       />
     </QueryClientProvider>,
@@ -192,6 +213,59 @@ describe('TaskFormDialog', () => {
       '変更が保存されていません。閉じてもよいですか？',
     )
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('編集のときは、見出しを「タスクを編集」にし、いまの内容を入れる', () => {
+    renderDialog(editingTask)
+
+    expect(
+      screen.getByRole('dialog', { name: 'タスクを編集' }),
+    ).toBeInTheDocument()
+    expect(titleInput()).toHaveValue('レポート提出')
+    expect(descriptionInput()).toHaveValue('第3回課題')
+    expect(screen.getByLabelText('期限')).toHaveValue('2026-11-01')
+    expect(screen.getByRole('button', { name: '中' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    // 初期ステータスではなく、タスクのいまのステータス
+    expect(screen.getByLabelText('ステータス')).toHaveValue('3')
+  })
+
+  it('編集して保存すると、更新 API に全項目を送って閉じる', async () => {
+    const fetchMock = mockUpdateApi()
+    const { onClose } = renderDialog(editingTask)
+
+    fireEvent.change(titleInput(), { target: { value: 'レポート再提出' } })
+    fireEvent.change(descriptionInput(), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: '期限なし' }))
+    fireEvent.click(screen.getByRole('button', { name: '高' }))
+    fireEvent.change(screen.getByLabelText('ステータス'), {
+      target: { value: '1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/tasks/7')
+    expect(init?.method).toBe('PUT')
+    expect(JSON.parse(String(init?.body))).toEqual({
+      title: 'レポート再提出',
+      description: null,
+      dueDate: null,
+      urgency: 'HIGH',
+      statusId: 1,
+    })
+  })
+
+  it('編集で何も変えていないときは、確認なしでキャンセルできる', () => {
+    const confirm = vi.spyOn(window, 'confirm')
+    const { onClose } = renderDialog(editingTask)
+
+    fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }))
+
+    expect(confirm).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('Esc でも未保存の確認を出し、OK なら閉じる', () => {

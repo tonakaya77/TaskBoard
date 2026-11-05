@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { makeTask } from '../../test/fixtures'
 import TaskCard from './TaskCard'
 
@@ -47,6 +47,17 @@ describe('TaskCard', () => {
 
     expect(screen.queryByText('緊急度')).not.toBeInTheDocument()
     expect(screen.getByRole('listitem')).toHaveTextContent(/^掃除/)
+  })
+
+  it('押すと onClick を呼ぶ', () => {
+    const onClick = vi.fn()
+    render(
+      <TaskCard task={makeTask({ title: '資料作成' })} onClick={onClick} />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /資料作成/ }))
+
+    expect(onClick).toHaveBeenCalled()
   })
 
   it('省略されても全文が分かるよう、タイトルをツールチップに出す', () => {

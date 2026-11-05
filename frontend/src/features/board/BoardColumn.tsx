@@ -6,10 +6,12 @@ import TaskCard from './TaskCard'
 
 type Props = {
   status: Status
+  /** カードを押したとき。タスク詳細を開く */
+  onOpenTask: (taskId: number) => void
 }
 
 /** ボードの列。ステータスのタスクを取得して、カードを並べる。 */
-function BoardColumn({ status }: Props) {
+function BoardColumn({ status, onOpenTask }: Props) {
   const {
     data: tasks,
     isPending,
@@ -34,7 +36,11 @@ function BoardColumn({ status }: Props) {
       {tasks && (
         <ul className={styles.cardList}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onClick={() => onOpenTask(task.id)}
+            />
           ))}
         </ul>
       )}
