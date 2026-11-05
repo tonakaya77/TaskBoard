@@ -66,42 +66,42 @@ erDiagram
 
 ## 2. テーブル定義
 
-型は MySQL を想定して書く。PostgreSQL に決まった場合は、自動採番を `GENERATED ALWAYS AS IDENTITY`、`DATETIME` を `TIMESTAMP` に読み替える。削除したときの動き（4章）を、データベースの連鎖削除で実現するかアプリで実現するかは、設計で決める。
+型は PostgreSQL を想定して書く（データベースは最終決定ではない。[技術スタック](tech-stack.md) を参照）。自動採番は `GENERATED ALWAYS AS IDENTITY` で作る。PostgreSQL には、更新時に日時を自動で変える機能（MySQL の `ON UPDATE`）がないので、`updated_at` をトリガーで変えるかアプリで入れるかは、設計で決める。削除したときの動き（4章）を、データベースの連鎖削除で実現するかアプリで実現するかは、設計で決める。
 
 ### users（ユーザー）
 
 | カラム | 型 | 必須 | 初期値 | 制約・説明 |
 |---|---|---|---|---|
-| id | BIGINT | ○ | 自動採番 | 主キー |
+| id | BIGINT | ○ | 自動採番（IDENTITY） | 主キー |
 | name | VARCHAR(20) | ○ | | 表示名 |
 | email | VARCHAR(255) | ○ | | ログインID。重複不可 |
 | password | VARCHAR(255) | ○ | | ハッシュ化したパスワード |
-| created_at | DATETIME | ○ | 現在日時 | |
-| updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
+| created_at | TIMESTAMP | ○ | 現在日時 | |
+| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
 
 ### projects（プロジェクト）
 
 | カラム | 型 | 必須 | 初期値 | 制約・説明 |
 |---|---|---|---|---|
-| id | BIGINT | ○ | 自動採番 | 主キー |
+| id | BIGINT | ○ | 自動採番（IDENTITY） | 主キー |
 | user_id | BIGINT | ○ | | 外部キー → users.id。持ち主 |
 | title | VARCHAR(30) | ○ | | |
 | color | CHAR(7) | ○ | 基本カラーの1つ | `#` ＋ 16進数6桁 |
 | default_status_id | BIGINT | | なし（空） | 初期ステータス（未着手）。（id, default_status_id）で statuses（project_id, id）を参照する複合外部キー。ステータスを作った直後に記録する |
 | done_status_id | BIGINT | | なし（空） | 完了ステータス。（id, done_status_id）で statuses（project_id, id）を参照する複合外部キー。ステータスを作った直後に記録する |
-| created_at | DATETIME | ○ | 現在日時 | |
-| updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
+| created_at | TIMESTAMP | ○ | 現在日時 | |
+| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
 
 ### statuses（ステータス）
 
 | カラム | 型 | 必須 | 初期値 | 制約・説明 |
 |---|---|---|---|---|
-| id | BIGINT | ○ | 自動採番 | 主キー |
+| id | BIGINT | ○ | 自動採番（IDENTITY） | 主キー |
 | project_id | BIGINT | ○ | | 外部キー → projects.id |
 | name | VARCHAR(20) | ○ | | |
 | position | INT | ○ | | 並び順 |
-| created_at | DATETIME | ○ | 現在日時 | |
-| updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
+| created_at | TIMESTAMP | ○ | 現在日時 | |
+| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
 
 制約：（project_id, id）の組を一意にする（tasks の複合外部キーで使う）
 
@@ -109,7 +109,7 @@ erDiagram
 
 | カラム | 型 | 必須 | 初期値 | 制約・説明 |
 |---|---|---|---|---|
-| id | BIGINT | ○ | 自動採番 | 主キー |
+| id | BIGINT | ○ | 自動採番（IDENTITY） | 主キー |
 | project_id | BIGINT | ○ | | 外部キー → projects.id |
 | status_id | BIGINT | ○ | | （project_id, status_id）で statuses（project_id, id）を参照する複合外部キー |
 | title | VARCHAR(50) | ○ | | |
@@ -118,20 +118,20 @@ erDiagram
 | position | INT | ○ | | 列の中の並び順 |
 | today_date | DATE | | なし | 今日やるタスクに選んだ日（朝4時の区切りで判断した日付） |
 | today_order | INT | | なし | 今日やるタスクの中の並び順。選んだときに、そのときの最大値＋1を入れる |
-| created_at | DATETIME | ○ | 現在日時 | |
-| updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
+| created_at | TIMESTAMP | ○ | 現在日時 | |
+| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
 
 ### subtasks（サブタスク）
 
 | カラム | 型 | 必須 | 初期値 | 制約・説明 |
 |---|---|---|---|---|
-| id | BIGINT | ○ | 自動採番 | 主キー |
+| id | BIGINT | ○ | 自動採番（IDENTITY） | 主キー |
 | task_id | BIGINT | ○ | | 外部キー → tasks.id |
 | title | VARCHAR(50) | ○ | | |
 | is_done | BOOLEAN | ○ | false | 完了したか |
 | position | INT | ○ | | 並び順 |
-| created_at | DATETIME | ○ | 現在日時 | |
-| updated_at | DATETIME | ○ | 現在日時 | 更新時に自動で変わる |
+| created_at | TIMESTAMP | ○ | 現在日時 | |
+| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
 
 ## 3. インデックス
 
@@ -149,7 +149,7 @@ erDiagram
 | idx_tasks_today | tasks | today_date, today_order | 通常 | ダッシュボードで、今日やるタスクを並び順に出す |
 | idx_subtasks_task_position | subtasks | task_id, position | 通常 | タスク詳細で、サブタスクを並び順に出す |
 
-- 外部キーのカラムには、MySQL（InnoDB）が自動でインデックスを付ける。上の表のインデックスで外部キーのカラムが先頭にあるものは、それを兼ねる
+- PostgreSQL は、外部キーのカラムにインデックスを自動では付けない。外部キーのカラムは、どれも上の表のインデックスの先頭にある（projects の複合外部キーは主キーの id が先頭）ので、外部キー用のインデックスは別に足さない
 - ダッシュボードのタスク一覧（全プロジェクトの、完了以外のタスクを期限が近い順）は、1人分のデータ量なら上のインデックスで十分速い。遅くなったときに、追加を検討する
 
 ## 4. 制約
