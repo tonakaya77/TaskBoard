@@ -6,7 +6,8 @@ services:
       - 'POSTGRES_USER=taskboard'
       - 'POSTGRES_PASSWORD=taskboard'
     ports:
-      - '5432:5432'
+      # 5432・5433 はほかのプロジェクトの PostgreSQL が使っているので、5434 にする。
+      - '5434:5432'
     volumes:
       - 'postgres-data:/var/lib/postgresql'
 
