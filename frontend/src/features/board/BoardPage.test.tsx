@@ -29,7 +29,7 @@ function mockApi(responses: Record<string, unknown>) {
   )
 }
 
-function renderBoard(projectId: number) {
+function renderBoard(projectId: number | string) {
   // テストでは失敗をすぐ表示させたいので、やり直しをしない
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -52,6 +52,7 @@ afterEach(() => {
 describe('BoardPage', () => {
   it('ステータスの列に、件数とタスクのカードを並べる', async () => {
     mockApi({
+      '/api/projects/1': makeProject({ id: 1 }),
       '/api/projects/1/statuses': [
         makeStatus({ id: 1, name: '未着手', position: 1 }),
         makeStatus({ id: 2, name: '進行中', position: 2 }),
@@ -227,7 +228,7 @@ describe('BoardPage', () => {
   })
 
   it('ステータスを取れないときは、エラーを表示する', async () => {
-    mockApi({})
+    mockApi({ '/api/projects/1': makeProject({ id: 1 }) })
 
     renderBoard(1)
 
@@ -236,8 +237,36 @@ describe('BoardPage', () => {
     )
   })
 
+  it('プロジェクトを取れないときは、エラーを表示する', async () => {
+    mockApi({
+      '/api/projects/1/statuses': [makeStatus({ id: 1, name: '未着手' })],
+      '/api/tasks/status/1': [],
+    })
+
+    renderBoard(1)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ボードを読み込めませんでした',
+    )
+    expect(
+      screen.queryByRole('region', { name: '未着手' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('URL のプロジェクト ID が数字でないときは、API を呼ばずにエラーを表示する', async () => {
+    mockApi({})
+
+    renderBoard('abc')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ボードを読み込めませんでした',
+    )
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('列のタスクを取れないときは、その列にエラーを表示する', async () => {
     mockApi({
+      '/api/projects/1': makeProject({ id: 1 }),
       '/api/projects/1/statuses': [makeStatus({ id: 1, name: '未着手' })],
     })
 

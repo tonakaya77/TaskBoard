@@ -20,6 +20,8 @@ import { useMoveTask } from './useMoveTask'
  */
 function BoardPage() {
   const projectId = Number(useParams().projectId)
+  // URL のプロジェクト ID が正の整数でないときは、API を呼ばずにエラーにする
+  const isValidProjectId = Number.isInteger(projectId) && projectId > 0
   const [isCreating, setIsCreating] = useState(false)
   // タスク詳細で開いているタスク
   const [detailTaskId, setDetailTaskId] = useState<number | null>(null)
@@ -27,20 +29,18 @@ function BoardPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const moveMutation = useMoveTask()
 
-  const {
-    data: statuses,
-    isPending,
-    isError,
-  } = useQuery({
+  const statusesQuery = useQuery({
     queryKey: queryKeys.statuses(projectId),
     queryFn: () => getStatuses(projectId),
+    enabled: isValidProjectId,
   })
 
   // タスク作成ダイアログのステータスの初期値（初期ステータス）と、
-  // タスク詳細のプロジェクト名・完了ステータスの判断に使う
-  const { data: project } = useQuery({
+  // カード・タスク詳細の完了ステータスの判断、タスク詳細のプロジェクト名に使う
+  const projectQuery = useQuery({
     queryKey: queryKeys.project(projectId),
     queryFn: () => getProject(projectId),
+    enabled: isValidProjectId,
   })
 
   function handleDragEnd({ draggableId, source, destination }: DropResult) {
@@ -62,8 +62,15 @@ function BoardPage() {
     })
   }
 
-  if (isPending) return <p>読み込み中...</p>
-  if (isError) return <p role="alert">ボードを読み込めませんでした</p>
+  // プロジェクトとステータスの両方がそろってから表示する。どちらかを読み込めなければエラー
+  if (!isValidProjectId || statusesQuery.isError || projectQuery.isError) {
+    return <p role="alert">ボードを読み込めませんでした</p>
+  }
+  if (statusesQuery.isPending || projectQuery.isPending) {
+    return <p>読み込み中...</p>
+  }
+  const statuses = statusesQuery.data
+  const project = projectQuery.data
 
   return (
     <>
@@ -72,7 +79,7 @@ function BoardPage() {
           type="button"
           className={styles.addButton}
           onClick={() => setIsCreating(true)}
-          disabled={!project || statuses.length === 0}
+          disabled={statuses.length === 0}
         >
           + タスクを追加
         </button>
@@ -89,20 +96,20 @@ function BoardPage() {
             <BoardColumn
               key={status.id}
               status={status}
-              doneStatusId={project?.doneStatusId ?? null}
+              doneStatusId={project.doneStatusId}
               onOpenTask={setDetailTaskId}
             />
           ))}
         </div>
       </DragDropContext>
-      {isCreating && project && (
+      {isCreating && (
         <TaskFormDialog
           project={project}
           statuses={statuses}
           onClose={() => setIsCreating(false)}
         />
       )}
-      {detailTaskId !== null && !editingTask && project && (
+      {detailTaskId !== null && !editingTask && (
         <TaskDetailDialog
           taskId={detailTaskId}
           project={project}
@@ -111,7 +118,7 @@ function BoardPage() {
           onClose={() => setDetailTaskId(null)}
         />
       )}
-      {editingTask && project && (
+      {editingTask && (
         <TaskFormDialog
           project={project}
           statuses={statuses}
