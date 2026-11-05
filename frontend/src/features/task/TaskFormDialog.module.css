@@ -1,0 +1,178 @@
+/* モック（mock/style.css）の dialog・.dlg・.field・.btn・.input と同じ見た目 */
+.dialog {
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  color: var(--text);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.dialog::backdrop {
+  background: rgba(9, 30, 66, 0.45);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 16px 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.heading {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 32px;
+}
+
+.body {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field > label,
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.note {
+  font-weight: normal;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.input {
+  width: 100%;
+  padding: 7px 10px;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.input:focus {
+  outline: 2px solid #93c5fd;
+  border-color: var(--primary);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.select {
+  width: auto;
+}
+
+.error {
+  margin: 4px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.errorBox {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--danger);
+  background: var(--red-bg);
+  border-radius: var(--radius);
+}
+
+.dueRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dueRow .input {
+  width: auto;
+}
+
+.urgency {
+  display: flex;
+  gap: 8px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:hover {
+  background: #f0f1f4;
+}
+
+/* 緊急度で選んでいるボタン */
+.button[aria-pressed='true'] {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.primary {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.primary:hover {
+  background: #1d4ed8;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.iconButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: #f0f1f4;
+}

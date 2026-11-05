@@ -1,19 +1,31 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { makeStatus, makeTask } from '../../test/fixtures'
+import { makeProject, makeStatus, makeTask } from '../../test/fixtures'
 import BoardPage from './BoardPage'
 
-/** URL ごとに返す JSON を決めて、fetch を差し替える。ないURLは 404。 */
+/**
+ * URL ごとに返す JSON を決めて、fetch を差し替える。ないURLは 404。
+ * GET 以外は「POST /api/...」のようにメソッドを付けたキーで決める。
+ * 値に関数を渡すと、呼ばれるたびにその結果を返す（登録のあとで中身を変えるとき）。
+ */
 function mockApi(responses: Record<string, unknown>) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string) =>
-      url in responses
-        ? Response.json(responses[url])
-        : new Response(null, { status: 404 }),
-    ),
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET'
+      const key = method === 'GET' ? url : `${method} ${url}`
+      if (!(key in responses)) return new Response(null, { status: 404 })
+      const value = responses[key]
+      return Response.json(typeof value === 'function' ? value() : value)
+    }),
   )
 }
 
@@ -92,6 +104,54 @@ describe('BoardPage', () => {
 
     const review = screen.getByRole('region', { name: '確認中' })
     expect(within(review).queryAllByRole('listitem')).toHaveLength(0)
+  })
+
+  it('「+ タスクを追加」から登録すると、選んだ列の一番下にカードが出る', async () => {
+    const doingTasks = [makeTask({ id: 1, statusId: 2, title: 'レポート提出' })]
+    mockApi({
+      '/api/projects/1': makeProject({ id: 1, defaultStatusId: 1 }),
+      '/api/projects/1/statuses': [
+        makeStatus({ id: 1, name: '未着手', position: 1 }),
+        makeStatus({ id: 2, name: '進行中', position: 2 }),
+      ],
+      '/api/tasks/status/1': [],
+      '/api/tasks/status/2': () => doingTasks,
+      'POST /api/projects/1/tasks': () => {
+        const created = makeTask({ id: 5, statusId: 2, title: '発表準備' })
+        doingTasks.push(created)
+        return created
+      },
+    })
+
+    renderBoard(1)
+
+    const addButton = await screen.findByRole('button', {
+      name: '+ タスクを追加',
+    })
+    await waitFor(() => expect(addButton).toBeEnabled())
+    fireEvent.click(addButton)
+
+    const dialog = screen.getByRole('dialog', { name: 'タスクを追加' })
+    fireEvent.change(within(dialog).getByLabelText(/タイトル/), {
+      target: { value: '発表準備' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('ステータス'), {
+      target: { value: '2' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }))
+
+    // ダイアログが閉じ、進行中の列の一番下に新しいカードが出る
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    const doing = screen.getByRole('region', { name: '進行中' })
+    await waitFor(() =>
+      expect(
+        within(doing)
+          .getAllByRole('listitem')
+          .map((card) => card.getAttribute('title')),
+      ).toEqual(['レポート提出', '発表準備']),
+    )
   })
 
   it('ステータスを取れないときは、エラーを表示する', async () => {

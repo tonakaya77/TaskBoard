@@ -6,3 +6,31 @@
   overflow-x: auto;
   padding-bottom: 12px;
 }
+
+/* モック（mock/style.css）の .toolbar・.btn-primary と同じ */
+.toolbar {
+  margin-bottom: 14px;
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  font: inherit;
+  color: #fff;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.addButton:hover {
+  background: #1d4ed8;
+}
+
+.addButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
