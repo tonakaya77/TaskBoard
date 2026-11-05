@@ -59,4 +59,14 @@ public class TaskController {
 	public Task update(@PathVariable long id, @Valid @RequestBody UpdateTaskRequest request) {
 		return taskService.update(id, request);
 	}
+
+	/**
+	 * タスクを、指定したステータスの列の指定した位置（0 始まり）へ移し、移したあとのタスクを返す。
+	 * 例: PUT /api/tasks/1/position。ボードのドラッグ＆ドロップで使う。
+	 * 入力が正しくないときと、別のプロジェクトのステータスを指定したときは 400、タスクがないときは 404
+	 */
+	@PutMapping("/api/tasks/{id}/position")
+	public Task move(@PathVariable long id, @Valid @RequestBody MoveTaskRequest request) {
+		return taskService.move(id, request);
+	}
 }

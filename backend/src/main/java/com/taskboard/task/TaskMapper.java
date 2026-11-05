@@ -87,4 +87,16 @@ public interface TaskMapper {
 			@Param("description") String description,
 			@Param("dueDate") LocalDate dueDate,
 			@Param("urgency") Urgency urgency);
+
+	/** タスクのステータスと、列の中の並び順を変える（docs/functions.md の UC-12）。 */
+	@Update("""
+			UPDATE tasks
+			   SET status_id = #{statusId},
+			       position = #{position}
+			 WHERE id = #{id}
+			""")
+	void updatePosition(
+			@Param("id") long id,
+			@Param("statusId") long statusId,
+			@Param("position") int position);
 }
