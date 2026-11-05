@@ -38,3 +38,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// bootRun では dev プロファイルを使い、開発用のテストデータを入れる（application-dev.properties）
+tasks.named('bootRun') {
+	systemProperty 'spring.profiles.active', 'dev'
+}
