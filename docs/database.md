@@ -123,10 +123,10 @@ erDiagram
 | position | INT | ○ | | 列の中の並び順 |
 | today_date | DATE | | なし | 今日やるタスクに選んだ日（朝4時の区切りで判断した日付） |
 | today_order | INT | | なし | 今日やるタスクの中の並び順。選んだときに、そのときの最大値＋1を入れる |
-
-制約：`today_date` と `today_order` は、両方入っているか、両方空かのどちらかにする（CHECK 制約）
 | created_at | TIMESTAMPTZ | ○ | 現在日時 | |
 | updated_at | TIMESTAMPTZ | ○ | 現在日時 | 更新時に、トリガーで現在日時へ変える |
+
+制約：`today_date` と `today_order` は、両方入っているか、両方空かのどちらかにする（CHECK 制約）
 
 ### subtasks（サブタスク）
 
