@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.taskboard.TestcontainersConfiguration;
 
 /**
- * タスクを読み取る API、登録する API、更新する API のテスト。
+ * タスクを読み取る API、登録する API、更新する API、移動する API のテスト。
  * 各テストはトランザクションの中で動き、終わったら元に戻る。
  */
 @SpringBootTest
@@ -326,6 +326,128 @@ class TaskControllerTests {
 				{"title": "どこにもない", "urgency": "HIGH", "statusId": %d}
 				""".formatted(statusA))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void moveReordersWithinSameColumn() throws Exception {
+		insertTask(projectA, statusA, "発表準備", 3);
+
+		// レポート提出・資料作成・発表準備 の一番下を、一番上へ
+		long lastId = idOf("発表準備");
+		moveTask(lastId, statusA, 0)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.statusId").value(statusA))
+				.andExpect(jsonPath("$.position").value(1));
+		assertColumn(statusA, "発表準備", "レポート提出", "資料作成");
+
+		// 一番上（発表準備）を、真ん中へ
+		moveTask(lastId, statusA, 1).andExpect(status().isOk());
+		assertColumn(statusA, "レポート提出", "発表準備", "資料作成");
+	}
+
+	@Test
+	void moveRenumbersPositionsOfColumn() throws Exception {
+		insertTask(projectA, statusA, "発表準備", 10);
+
+		moveTask(reportTaskId, statusA, 2).andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/tasks/status/{statusId}", statusA))
+				.andExpect(jsonPath("$[*].title").value(contains("資料作成", "発表準備", "レポート提出")))
+				.andExpect(jsonPath("$[*].position").value(contains(1, 2, 3)));
+	}
+
+	@Test
+	void moveToAnotherColumnInsertsAtIndex() throws Exception {
+		long doingStatus = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '進行中', 2) RETURNING id");
+		insertTask(projectA, doingStatus, "調べもの", 1);
+		insertTask(projectA, doingStatus, "下書き", 2);
+
+		// 先頭へ
+		moveTask(reportTaskId, doingStatus, 0)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.statusId").value(doingStatus))
+				.andExpect(jsonPath("$.position").value(1));
+		assertColumn(doingStatus, "レポート提出", "調べもの", "下書き");
+		assertColumn(statusA, "資料作成");
+
+		// 別の列の途中へ
+		long docId = idOf("資料作成");
+		moveTask(docId, doingStatus, 2).andExpect(status().isOk());
+		assertColumn(doingStatus, "レポート提出", "調べもの", "資料作成", "下書き");
+	}
+
+	@Test
+	void moveToBottomWhenIndexIsLargerThanColumn() throws Exception {
+		long doingStatus = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '進行中', 2) RETURNING id");
+		insertTask(projectA, doingStatus, "調べもの", 1);
+
+		moveTask(reportTaskId, doingStatus, 99)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.position").value(2));
+		assertColumn(doingStatus, "調べもの", "レポート提出");
+	}
+
+	@Test
+	void moveToEmptyColumn() throws Exception {
+		long emptyStatus = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '完了', 2) RETURNING id");
+
+		moveTask(reportTaskId, emptyStatus, 0)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.position").value(1));
+		assertColumn(emptyStatus, "レポート提出");
+	}
+
+	@Test
+	void moveReturns400WhenIndexIsNegative() throws Exception {
+		moveTask(reportTaskId, statusA, -1).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void moveReturns400WhenFieldsAreOmitted() throws Exception {
+		mockMvc.perform(put("/api/tasks/{id}/position", reportTaskId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"statusId": %d}
+						""".formatted(statusA)))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(put("/api/tasks/{id}/position", reportTaskId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"index": 0}
+						"""))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void moveReturns400WhenStatusBelongsToAnotherProject() throws Exception {
+		moveTask(reportTaskId, statusB, 0).andExpect(status().isBadRequest());
+
+		// 動いていない
+		assertColumn(statusA, "レポート提出", "資料作成");
+		assertColumn(statusB, "買い物");
+	}
+
+	@Test
+	void moveReturns404WhenTaskDoesNotExist() throws Exception {
+		moveTask(reportTaskId + 1000, statusA, 0).andExpect(status().isNotFound());
+	}
+
+	private ResultActions moveTask(long id, long statusId, int index) throws Exception {
+		return mockMvc.perform(put("/api/tasks/{id}/position", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"statusId": %d, "index": %d}
+						""".formatted(statusId, index)));
+	}
+
+	/** 列のタスクが、この順に並んでいることを確かめる。 */
+	private void assertColumn(long statusId, String... titles) throws Exception {
+		mockMvc.perform(get("/api/tasks/status/{statusId}", statusId))
+				.andExpect(jsonPath("$[*].title").value(contains(titles)));
+	}
+
+	private long idOf(String title) {
+		return jdbc.sql("SELECT id FROM tasks WHERE title = ?").param(title).query(Long.class).single();
 	}
 
 	private ResultActions putTask(long id, String json) throws Exception {
