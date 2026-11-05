@@ -22,6 +22,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     title: 'タスク',
     description: null,
     dueDate: null,
+    urgency: 'NORMAL',
     position: 1,
     todayDate: null,
     todayOrder: null,

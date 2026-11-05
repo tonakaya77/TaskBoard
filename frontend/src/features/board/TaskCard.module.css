@@ -11,11 +11,63 @@
   border-color: #b3bac5;
 }
 
+/* 緊急度の色帯（カードの左端）。高は赤、中は黄（機能設計 F-11） */
+.high {
+  border-left: 4px solid var(--red);
+}
+
+.medium {
+  border-left: 4px solid var(--yellow-line);
+}
+
+/* 色帯の太さぶん、文字の位置がずれないように左の余白を減らす */
+.high,
+.medium {
+  padding-left: 9px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 緊急度のバッジ。モックの .badge と同じ形 */
+.badge {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.high .badge {
+  color: var(--red);
+  background: var(--red-bg);
+}
+
+.medium .badge {
+  color: var(--yellow);
+  background: var(--yellow-bg);
+}
+
+/* 画面には出さず、読み上げのときだけ読む文字 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .title {
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .meta {
