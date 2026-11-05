@@ -8,10 +8,11 @@ Claude Code はこのルールを必ず守る。守れない事情があると�
 1. イシューを作る          gh issue create
 2. ブランチを作る          git checkout -b feature/<イシュー番号>-<短い説明>
 3. 実装してコミットする    git commit
-4. プッシュする            git push -u origin <ブランチ名>
-5. PR を作る               gh pr create
-6. マージする              gh pr merge --merge --delete-branch
-7. ローカルのブランチを消す git checkout main && git pull && git branch -d <ブランチ名>
+4. チェックする            /check（スキル）
+5. プッシュする            git push -u origin <ブランチ名>
+6. PR を作る               gh pr create
+7. マージする              gh pr merge --merge --delete-branch
+8. ローカルのブランチを消す git checkout main && git pull && git branch -d <ブランチ名>
 ```
 
 ## イシュー
@@ -48,6 +49,7 @@ Claude Code はこのルールを必ず守る。守れない事情があると�
 ## PR
 
 - main への変更は必ず PR を通す
+- PR を作る前に、スキル `/check`（`.claude/skills/check/SKILL.md`）でチェックを実行し、すべて通ってから PR を作る。CI がないので、ここで通らなければ PR を作らない
 - 1つの PR に1つの話題
 - タイトルは Conventional Commits の形（`種類: 内容`）。例: `feat: ログイン機能を追加`
 - 説明は日本語で、テンプレートの項目（概要（何を・なぜ）・関連・変更内容・確認方法・スクリーンショット・影響範囲・注意点）に沿って書く。変更したファイルの一覧は書かない
