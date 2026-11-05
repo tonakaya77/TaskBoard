@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -47,5 +48,15 @@ public class TaskController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public Task create(@PathVariable long projectId, @Valid @RequestBody CreateTaskRequest request) {
 		return taskService.create(projectId, request);
+	}
+
+	/**
+	 * タスクの内容を置き換え、更新後のタスクを返す。例: PUT /api/tasks/1。
+	 * ステータスを変えると、移った先の列の一番下に入る。
+	 * 入力が正しくないときと、別のプロジェクトのステータスを指定したときは 400、タスクがないときは 404
+	 */
+	@PutMapping("/api/tasks/{id}")
+	public Task update(@PathVariable long id, @Valid @RequestBody UpdateTaskRequest request) {
+		return taskService.update(id, request);
 	}
 }
