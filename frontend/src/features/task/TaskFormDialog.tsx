@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState } from 'react'
-import { createTask } from '../../api/tasks'
-import type { Project, Status, Urgency } from '../../api/types'
+import { createTask, updateTask } from '../../api/tasks'
+import type { Project, Status, Task, Urgency } from '../../api/types'
 import styles from './TaskFormDialog.module.css'
 
 type Props = {
   project: Project
   statuses: Status[]
+  /** 編集するタスク。渡すと編集モード、省くと作成モード */
+  task?: Task
   onClose: () => void
 }
 
@@ -50,38 +52,53 @@ function validate(form: Form): Errors {
 }
 
 /**
- * タスク作成ダイアログ（S-06 の作成モード）。
- * 保存すると、選んだ列の一番下にタスクが入り、その列を読み直す。
+ * タスク作成・編集ダイアログ（S-06）。task を渡すと編集モードになる。
+ * 作成で保存すると、選んだ列の一番下にタスクが入る。
+ * 編集でステータスを変えると、移った先の列の一番下に入る。
+ * 保存したら、ボードの列とタスク詳細を読み直す。
  */
-function TaskFormDialog({ project, statuses, onClose }: Props) {
+function TaskFormDialog({ project, statuses, task, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const queryClient = useQueryClient()
   const id = useId()
 
-  // 作成のときの初期値。緊急度は通常、ステータスは初期ステータス（未着手）
-  const [initial] = useState<Form>(() => ({
-    title: '',
-    description: '',
-    dueDate: '',
-    urgency: 'NORMAL',
-    statusId: project.defaultStatusId ?? statuses[0].id,
-  }))
+  // 編集のときは、いまの内容を入れる。
+  // 作成のときは、緊急度は通常、ステータスは初期ステータス（未着手）
+  const [initial] = useState<Form>(() =>
+    task
+      ? {
+          title: task.title,
+          description: task.description ?? '',
+          dueDate: task.dueDate ?? '',
+          urgency: task.urgency,
+          statusId: task.statusId,
+        }
+      : {
+          title: '',
+          description: '',
+          dueDate: '',
+          urgency: 'NORMAL',
+          statusId: project.defaultStatusId ?? statuses[0].id,
+        },
+  )
   const [form, setForm] = useState<Form>(initial)
   const [errors, setErrors] = useState<Errors>({})
 
   const mutation = useMutation({
-    mutationFn: () =>
-      createTask(project.id, {
+    mutationFn: () => {
+      const input = {
         title: form.title,
         description: form.description === '' ? null : form.description,
         dueDate: form.dueDate === '' ? null : form.dueDate,
         urgency: form.urgency,
         statusId: form.statusId,
-      }),
-    onSuccess: async (task) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['tasks', 'status', task.statusId],
-      })
+      }
+      return task ? updateTask(task.id, input) : createTask(project.id, input)
+    },
+    onSuccess: async () => {
+      // ステータスを変えたときは移る前と後の両方の列が変わるので、
+      // タスクに関するもの（列・タスク詳細）をまとめて読み直す
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] })
       onClose()
     },
   })
@@ -136,7 +153,7 @@ function TaskFormDialog({ project, statuses, onClose }: Props) {
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         <div className={styles.head}>
           <h2 id={`${id}-heading`} className={styles.heading}>
-            タスクを追加
+            {task ? 'タスクを編集' : 'タスクを追加'}
           </h2>
           <button
             type="button"
