@@ -124,6 +124,20 @@ class SchemaTests {
 	}
 
 	@Test
+	void urgencyDefaultsToNormal() {
+		String urgency = jdbc.sql("SELECT urgency FROM tasks WHERE id = ?")
+				.param(taskId).query(String.class).single();
+
+		assertThat(urgency).isEqualTo("NORMAL");
+	}
+
+	@Test
+	void urgencyMustBeHighMediumOrNormal() {
+		assertThatThrownBy(() -> jdbc.sql("UPDATE tasks SET urgency = 'LOW' WHERE id = ?").param(taskId).update())
+				.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
 	void updatingRowChangesUpdatedAt() {
 		// トランザクションの中では now() が変わらないので、わざと古い日時にしてから更新する
 		jdbc.sql("UPDATE tasks SET updated_at = '2000-01-01' WHERE id = ?").param(taskId).update();
