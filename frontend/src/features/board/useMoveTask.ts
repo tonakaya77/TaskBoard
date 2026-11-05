@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../../api/queryKeys'
 import { moveTask } from '../../api/tasks'
 import type { Task } from '../../api/types'
 import { type CardPlace, moveCard } from './moveCard'
@@ -7,11 +8,6 @@ type Variables = {
   taskId: number
   from: CardPlace
   to: CardPlace
-}
-
-/** 列のタスク一覧のキャッシュのキー（BoardColumn の useQuery と同じ） */
-function columnKey(statusId: number) {
-  return ['tasks', 'status', statusId]
 }
 
 /**
@@ -28,13 +24,21 @@ export function useMoveTask() {
 
     onMutate: async ({ from, to }) => {
       // 読み込み中の結果で、動かした並びが上書きされないように止める
-      await queryClient.cancelQueries({ queryKey: columnKey(from.statusId) })
-      await queryClient.cancelQueries({ queryKey: columnKey(to.statusId) })
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.tasksByStatus(from.statusId),
+      })
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.tasksByStatus(to.statusId),
+      })
 
       const previousSource =
-        queryClient.getQueryData<Task[]>(columnKey(from.statusId)) ?? []
+        queryClient.getQueryData<Task[]>(
+          queryKeys.tasksByStatus(from.statusId),
+        ) ?? []
       const previousDestination =
-        queryClient.getQueryData<Task[]>(columnKey(to.statusId)) ?? []
+        queryClient.getQueryData<Task[]>(
+          queryKeys.tasksByStatus(to.statusId),
+        ) ?? []
 
       const { source, destination } = moveCard(
         previousSource,
@@ -42,8 +46,11 @@ export function useMoveTask() {
         from,
         to,
       )
-      queryClient.setQueryData(columnKey(from.statusId), source)
-      queryClient.setQueryData(columnKey(to.statusId), destination)
+      queryClient.setQueryData(queryKeys.tasksByStatus(from.statusId), source)
+      queryClient.setQueryData(
+        queryKeys.tasksByStatus(to.statusId),
+        destination,
+      )
 
       return { previousSource, previousDestination }
     },
@@ -51,15 +58,19 @@ export function useMoveTask() {
     onError: (_error, { from, to }, context) => {
       if (!context) return
       // 元の列と位置に戻す
-      queryClient.setQueryData(columnKey(from.statusId), context.previousSource)
+      queryClient.setQueryData(
+        queryKeys.tasksByStatus(from.statusId),
+        context.previousSource,
+      )
       if (from.statusId !== to.statusId) {
         queryClient.setQueryData(
-          columnKey(to.statusId),
+          queryKeys.tasksByStatus(to.statusId),
           context.previousDestination,
         )
       }
     },
 
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks }),
   })
 }

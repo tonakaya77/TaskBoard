@@ -1,5 +1,6 @@
 import { Droppable } from '@hello-pangea/dnd'
 import { useQuery } from '@tanstack/react-query'
+import { queryKeys } from '../../api/queryKeys'
 import { getTasksByStatus } from '../../api/tasks'
 import type { Status } from '../../api/types'
 import styles from './BoardColumn.module.css'
@@ -18,7 +19,7 @@ function BoardColumn({ status, onOpenTask }: Props) {
     isPending,
     isError,
   } = useQuery({
-    queryKey: ['tasks', 'status', status.id],
+    queryKey: queryKeys.tasksByStatus(status.id),
     queryFn: () => getTasksByStatus(status.id),
   })
 

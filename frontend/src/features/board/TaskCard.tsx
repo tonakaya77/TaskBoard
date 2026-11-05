@@ -1,5 +1,10 @@
 import { Draggable } from '@hello-pangea/dnd'
-import type { Task, Urgency } from '../../api/types'
+import type { Task } from '../../api/types'
+import {
+  type BadgeUrgency,
+  URGENCY_LABELS,
+  badgeUrgency,
+} from '../task/urgency'
 import styles from './TaskCard.module.css'
 import { formatDueDate } from './formatDueDate'
 
@@ -11,14 +16,10 @@ type Props = {
   onClick?: () => void
 }
 
-/** 緊急度ごとの、バッジの文字とカードの見た目。通常は何も出さない（機能設計 F-11）。 */
-const urgencyStyles: Record<
-  Urgency,
-  { label: string; className: string } | null
-> = {
-  HIGH: { label: '高', className: styles.high },
-  MEDIUM: { label: '中', className: styles.medium },
-  NORMAL: null,
+/** 緊急度ごとの、カードの色帯とバッジの色 */
+const urgencyClassNames: Record<BadgeUrgency, string> = {
+  HIGH: styles.high,
+  MEDIUM: styles.medium,
 }
 
 /**
@@ -28,7 +29,8 @@ const urgencyStyles: Record<
  * キーボードでは Space で持ち上げ、矢印キーで動かし、Space で置く。
  */
 function TaskCard({ task, index, onClick }: Props) {
-  const urgency = urgencyStyles[task.urgency]
+  // 完了ステータスかどうかは、まだ見ていない（#33）
+  const urgency = badgeUrgency(task, null)
 
   return (
     <Draggable
@@ -50,7 +52,7 @@ function TaskCard({ task, index, onClick }: Props) {
             {...provided.dragHandleProps}
             className={[
               styles.card,
-              urgency?.className,
+              urgency && urgencyClassNames[urgency],
               snapshot.isDragging && styles.dragging,
             ]
               .filter(Boolean)
@@ -62,7 +64,7 @@ function TaskCard({ task, index, onClick }: Props) {
                 <span className={styles.badge}>
                   {/* 読み上げのときに、何の「高」「中」かがわかるようにする */}
                   <span className={styles.srOnly}>緊急度</span>
-                  {urgency.label}
+                  {URGENCY_LABELS[urgency]}
                 </span>
               )}
               <span className={styles.title}>{task.title}</span>
