@@ -46,7 +46,7 @@ curl http://localhost:8080/api/projects/1/statuses
 
 ## フロントエンド（`frontend/`）
 
-React 19（TypeScript）/ Vite。Node.js 24 以上を入れておく。
+React 19（TypeScript）/ Vite。Node.js 26 以上を入れておく。
 
 ```sh
 cd frontend
