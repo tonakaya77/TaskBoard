@@ -37,6 +37,14 @@ Claude Code はこのルールを必ず守る。守れない事情があると�
 - 種類: `feat` / `fix` / `docs` / `refactor` / `test` / `style`（動きを変えない見た目の整理）/ `chore`。ブランチの種類に合わせる（`feature` → `feat`）
 - 1コミットに1つの変更。これまでのコミットは書き直さない
 
+## 開発サーバー
+
+- ポートはアプリの設定で決めたものだけを使う。バックエンドは 8080（`backend/src/main/resources/application.properties` の `server.port`）、フロントエンドは 5173（`frontend/vite.config.ts` の `server.port`）
+- 起動するときにポートが使われていたら、そのポートのプロセスを止めてから、決めたポートで起動する。別のポートで起動したり、ポートを変えて逃げたりしない
+- Claude Code では、フック（`.claude/hooks/free-dev-port.mjs`）が `./gradlew bootRun`・`npm run dev`・`npx vite` の直前に、そのポートのプロセスを自動で止める
+- Docker のプロセスがポートを使っているときは止めない（すべてのコンテナが落ちるため）。ユーザーに知らせて確認する
+- Vite は `strictPort: true` にしてあり、ポートが空いていなければ別のポートに逃げずにエラーで止まる
+
 ## PR
 
 - main への変更は必ず PR を通す
