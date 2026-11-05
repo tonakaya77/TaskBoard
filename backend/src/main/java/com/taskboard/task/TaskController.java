@@ -3,6 +3,7 @@ package com.taskboard.task;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -68,5 +69,15 @@ public class TaskController {
 	@PutMapping("/api/tasks/{id}/position")
 	public Task move(@PathVariable long id, @Valid @RequestBody MoveTaskRequest request) {
 		return taskService.move(id, request);
+	}
+
+	/**
+	 * タスクを削除し、204（本文なし）を返す。例: DELETE /api/tasks/1。
+	 * サブタスクもまとめて削除する。タスクがないときは 404
+	 */
+	@DeleteMapping("/api/tasks/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void delete(@PathVariable long id) {
+		taskService.delete(id);
 	}
 }

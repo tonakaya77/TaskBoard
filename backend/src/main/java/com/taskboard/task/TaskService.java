@@ -110,6 +110,16 @@ public class TaskService {
 		return findById(id);
 	}
 
+	/**
+	 * タスクを削除する（docs/functions.md の UC-11）。サブタスクもまとめて消える。
+	 * タスクがないときは TaskNotFoundException。
+	 */
+	@Transactional
+	public void delete(long id) {
+		findById(id);
+		taskMapper.delete(id);
+	}
+
 	/** 空の説明は「説明なし」（null）として保存する。 */
 	private static String normalizeDescription(String description) {
 		return description == null || description.isEmpty() ? null : description;

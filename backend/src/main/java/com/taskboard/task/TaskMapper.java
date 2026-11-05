@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
@@ -99,4 +100,11 @@ public interface TaskMapper {
 			@Param("id") long id,
 			@Param("statusId") long statusId,
 			@Param("position") int position);
+
+	/** タスクを削除する（docs/functions.md の UC-11）。サブタスクは ON DELETE CASCADE で一緒に消える。 */
+	@Delete("""
+			DELETE FROM tasks
+			 WHERE id = #{id}
+			""")
+	void delete(long id);
 }
