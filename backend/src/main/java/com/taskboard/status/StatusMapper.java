@@ -3,6 +3,7 @@ package com.taskboard.status;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 @Mapper
@@ -16,4 +17,12 @@ public interface StatusMapper {
 			 ORDER BY position, id
 			""")
 	List<Status> findByProjectId(long projectId);
+
+	/** そのステータスが、指定したプロジェクトのものか。 */
+	@Select("""
+			SELECT EXISTS (
+			    SELECT 1 FROM statuses WHERE id = #{statusId} AND project_id = #{projectId}
+			)
+			""")
+	boolean existsInProject(@Param("projectId") long projectId, @Param("statusId") long statusId);
 }

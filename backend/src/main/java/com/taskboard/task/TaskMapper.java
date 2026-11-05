@@ -1,9 +1,12 @@
 package com.taskboard.task;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 @Mapper
@@ -36,4 +39,25 @@ public interface TaskMapper {
 			 WHERE id = #{id}
 			""")
 	Optional<Task> findById(long id);
+
+	/**
+	 * タスクを登録して、その ID を返す。列（ステータス）の一番下に入れる（docs/functions.md の F-04）。
+	 * 値を返す INSERT なので @Select で書き、キャッシュを消すようにする。
+	 */
+	@Select("""
+			INSERT INTO tasks (project_id, status_id, title, description, due_date, urgency, position)
+			SELECT #{projectId}, #{statusId}, #{title}, #{description}, #{dueDate}, #{urgency},
+			       COALESCE(MAX(position), 0) + 1
+			  FROM tasks
+			 WHERE status_id = #{statusId}
+			RETURNING id
+			""")
+	@Options(flushCache = Options.FlushCachePolicy.TRUE)
+	long insert(
+			@Param("projectId") long projectId,
+			@Param("statusId") long statusId,
+			@Param("title") String title,
+			@Param("description") String description,
+			@Param("dueDate") LocalDate dueDate,
+			@Param("urgency") Urgency urgency);
 }
