@@ -1,5 +1,6 @@
 plugins {
 	id 'java'
+	id 'checkstyle'
 	id 'org.springframework.boot' version '4.1.2'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -33,6 +34,19 @@ dependencies {
 	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
 	testImplementation 'org.testcontainers:testcontainers-postgresql'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// コンパイラの警告をすべて出し、警告があればビルドを失敗させる。
+// serial（例外クラスの serialVersionUID）と processing（注釈処理）の警告は、直す意味が薄いので外す
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-Xlint:all,-serial,-processing', '-Werror']
+}
+
+// Checkstyle で書き方を確かめる（ルールは config/checkstyle/checkstyle.xml）。
+// ./gradlew check で、テストと一緒に動く。違反が1つでもあれば失敗させる
+checkstyle {
+	toolVersion = '14.4.0'
+	maxWarnings = 0
 }
 
 tasks.named('test') {

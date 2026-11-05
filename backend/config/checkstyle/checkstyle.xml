@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+		"-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+		"https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+	バックエンドの書き方のルール。./gradlew check で確かめる。
+	いまの書き方（タブでインデント）に合わせ、間違いにつながりやすいものに絞る。
+	見た目の細かい好み（行の長さ・空白の位置など）は入れない。
+-->
+<module name="Checker">
+	<property name="charset" value="UTF-8"/>
+	<property name="severity" value="error"/>
+
+	<!-- ファイルの最後に改行を入れる（差分に「改行なし」の印が出ないようにする） -->
+	<module name="NewlineAtEndOfFile"/>
+
+	<!-- 行末の空白を残さない（見えない差分の原因になる） -->
+	<module name="RegexpSingleline">
+		<property name="format" value="\s+$"/>
+		<property name="message" value="行末に空白があります"/>
+	</module>
+
+	<module name="TreeWalker">
+		<!-- import：使っていないもの・重複・「*」での読み込みを残さない（何を使っているかを見えるようにする） -->
+		<module name="UnusedImports"/>
+		<module name="RedundantImport"/>
+		<module name="AvoidStarImport"/>
+
+		<!-- if や for の中身は、1行でも {} で囲む（あとで行を足したときの間違いを防ぐ） -->
+		<module name="NeedBraces"/>
+		<!-- 中身が空の {} を残さない（書き忘れか、例外の握りつぶしになりやすい） -->
+		<module name="EmptyBlock">
+			<property name="option" value="text"/>
+		</module>
+		<!-- 1行に1つの文だけ書く -->
+		<module name="OneStatementPerLine"/>
+		<!-- public static final などの順番を、Java の決まった順にそろえる -->
+		<module name="ModifierOrder"/>
+		<!-- 「== true」のような、もっと簡単に書ける条件を残さない -->
+		<module name="SimplifyBooleanExpression"/>
+		<!-- equals を書き換えたら hashCode も書き換える（コレクションで正しく動かなくなるため） -->
+		<module name="EqualsHashCode"/>
+
+		<!-- 名前：Java の慣例（クラスは大文字始まり、変数・メソッドは小文字始まり、定数は大文字とアンダースコア） -->
+		<module name="TypeName"/>
+		<module name="MethodName"/>
+		<module name="MemberName"/>
+		<module name="ParameterName"/>
+		<module name="LocalVariableName"/>
+		<module name="ConstantName"/>
+	</module>
+</module>
