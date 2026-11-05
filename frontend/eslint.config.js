@@ -15,7 +15,7 @@ export default defineConfig([
       tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
-      // Prettier ‚Æd‚È‚éŒ©‚½–Ú‚Ìƒ‹[ƒ‹‚ğØ‚éiÅŒã‚É’u‚­j
+      // Prettier ã¨é‡ãªã‚‹è¦‹ãŸç›®ã®ãƒ«ãƒ¼ãƒ«ã‚’åˆ‡ã‚‹ï¼ˆæœ€å¾Œã«ç½®ãï¼‰
       prettier,
     ],
     languageOptions: {
