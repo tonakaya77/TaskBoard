@@ -1,0 +1,41 @@
+/* アプリ全体の基本スタイル。色や余白の値はモック（mock/style.css）と同じ */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --border: #dfe1e6;
+  --text: #172b4d;
+  --muted: #6b778c;
+  --primary: #2563eb;
+  --danger: #dc2626;
+  --radius: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family:
+    system-ui, -apple-system, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI',
+    'Meiryo', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+h1 {
+  font-size: 20px;
+}
