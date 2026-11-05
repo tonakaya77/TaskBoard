@@ -1,5 +1,10 @@
 import { fetchJson, postJson, putJson } from './client'
-import type { CreateTaskInput, Task, UpdateTaskInput } from './types'
+import type {
+  CreateTaskInput,
+  MoveTaskInput,
+  Task,
+  UpdateTaskInput,
+} from './types'
 
 /** ステータス（ボードの列）のタスクを、列の中の並び順で取得する。 */
 export function getTasksByStatus(statusId: number): Promise<Task[]> {
@@ -25,4 +30,9 @@ export function updateTask(
   input: UpdateTaskInput,
 ): Promise<Task> {
   return putJson<Task>(`/api/tasks/${taskId}`, input)
+}
+
+/** タスクを、指定した列の指定した位置へ移す（ボードのドラッグ＆ドロップ）。 */
+export function moveTask(taskId: number, input: MoveTaskInput): Promise<Task> {
+  return putJson<Task>(`/api/tasks/${taskId}/position`, input)
 }
