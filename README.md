@@ -21,11 +21,13 @@ cd backend
 | GET | `/api/tasks` | 全タスク（ID 順） |
 | GET | `/api/tasks/{id}` | タスク1件。ないときは 404 |
 | GET | `/api/tasks/status/{statusId}` | ステータス別のタスク（カンバンの列表示用）。列の中の並び順 |
+| GET | `/api/projects/{projectId}/statuses` | プロジェクトのステータス（ボードの列）。並び順。プロジェクトがないときは空の配列 |
 
 ```sh
 curl http://localhost:8080/api/tasks
 curl http://localhost:8080/api/tasks/1
 curl http://localhost:8080/api/tasks/status/1
+curl http://localhost:8080/api/projects/1/statuses
 ```
 
 アプリを止めても PostgreSQL は動いたまま。止めるときは `docker compose down`（データは残る）。
