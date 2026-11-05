@@ -36,6 +36,7 @@ class TaskControllerTests {
 
 	private long projectA;
 	private long projectB;
+	private long statusA;
 	private long reportTaskId;
 
 	/** プロジェクト A にタスク2つ、プロジェクト B にタスク1つを作る。 */
@@ -44,7 +45,7 @@ class TaskControllerTests {
 		long userId = insert("INSERT INTO users (name, email, password) VALUES ('テスト', 'test@example.com', 'hash') RETURNING id");
 		projectA = insert("INSERT INTO projects (user_id, title, color) VALUES (" + userId + ", 'A', '#3B82F6') RETURNING id");
 		projectB = insert("INSERT INTO projects (user_id, title, color) VALUES (" + userId + ", 'B', '#22C55E') RETURNING id");
-		long statusA = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '未着手', 1) RETURNING id");
+		statusA = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '未着手', 1) RETURNING id");
 		long statusB = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectB + ", '未着手', 1) RETURNING id");
 
 		reportTaskId = jdbc.sql("""
@@ -70,6 +71,27 @@ class TaskControllerTests {
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].title").value("買い物"))
 				.andExpect(jsonPath("$[0].projectId").value(projectB));
+	}
+
+	@Test
+	void findByStatusIdReturnsTasksInPositionOrder() throws Exception {
+		// ID は一番大きいが、列の中では一番上に置いたタスク
+		insertTask(projectA, statusA, "割り込み", 0);
+
+		mockMvc.perform(get("/api/tasks/status/{statusId}", statusA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[*].title").value(contains("割り込み", "レポート提出", "資料作成")))
+				.andExpect(jsonPath("$[*].statusId").value(contains(
+						(int) statusA, (int) statusA, (int) statusA)));
+	}
+
+	@Test
+	void findByStatusIdReturnsEmptyListWhenStatusHasNoTasks() throws Exception {
+		long emptyStatus = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '完了', 2) RETURNING id");
+
+		mockMvc.perform(get("/api/tasks/status/{statusId}", emptyStatus))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(0)));
 	}
 
 	@Test

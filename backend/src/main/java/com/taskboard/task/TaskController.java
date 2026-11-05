@@ -24,6 +24,12 @@ public class TaskController {
 		return taskService.findAll(projectId);
 	}
 
+	/** ステータス別のタスク（カンバンの列表示用）。列の中の並び順。例: GET /api/tasks/status/1 */
+	@GetMapping("/status/{statusId}")
+	public List<Task> findByStatusId(@PathVariable long statusId) {
+		return taskService.findByStatusId(statusId);
+	}
+
 	/** タスク1件。例: GET /api/tasks/1。ないときは 404 */
 	@GetMapping("/{id}")
 	public Task findById(@PathVariable long id) {
