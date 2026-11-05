@@ -1,4 +1,4 @@
-import { fetchJson, postJson, putJson } from './client'
+import { deleteRequest, fetchJson, postJson, putJson } from './client'
 import type {
   CreateTaskInput,
   MoveTaskInput,
@@ -35,4 +35,9 @@ export function updateTask(
 /** タスクを、指定した列の指定した位置へ移す（ボードのドラッグ＆ドロップ）。 */
 export function moveTask(taskId: number, input: MoveTaskInput): Promise<Task> {
   return putJson<Task>(`/api/tasks/${taskId}/position`, input)
+}
+
+/** タスクを削除する。サブタスクも一緒に消える。 */
+export function deleteTask(taskId: number): Promise<void> {
+  return deleteRequest(`/api/tasks/${taskId}`)
 }

@@ -33,3 +33,11 @@ export function postJson<T>(path: string, body: unknown): Promise<T> {
 export function putJson<T>(path: string, body: unknown): Promise<T> {
   return sendJson<T>('PUT', path, body)
 }
+
+/** API に DELETE を送る。返事の本文（204 なので空）は読まない。成功（2xx）でなければ例外にする。 */
+export async function deleteRequest(path: string): Promise<void> {
+  const res = await fetch(path, { method: 'DELETE' })
+  if (!res.ok) {
+    throw new Error(`API の呼び出しに失敗しました（${res.status}）: ${path}`)
+  }
+}

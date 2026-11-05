@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useRef } from 'react'
-import { getTask } from '../../api/tasks'
+import { deleteTask, getTask } from '../../api/tasks'
 import type { Project, Status, Task, Urgency } from '../../api/types'
 import { formatDueDate } from '../board/formatDueDate'
 import styles from './TaskDetailDialog.module.css'
@@ -27,7 +27,8 @@ const urgencyBadges: Record<
 
 /**
  * タスク詳細ダイアログ（S-05）。内容を表示し、「編集」でタスク作成・編集（S-06）を開く。
- * サブタスク・削除・期限アラートは、まだ作っていない。
+ * 「削除」は確認してからタスクを削除し、ダイアログを閉じる（UC-11）。
+ * サブタスク・期限アラートは、まだ作っていない。
  */
 function TaskDetailDialog({
   taskId,
@@ -38,6 +39,7 @@ function TaskDetailDialog({
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const headingId = useId()
+  const queryClient = useQueryClient()
 
   // 編集で保存したあとに読み直されるよう、キーは ['tasks', …] の下に置く
   const {
@@ -48,6 +50,19 @@ function TaskDetailDialog({
     queryKey: ['tasks', taskId],
     queryFn: () => getTask(taskId),
   })
+
+  const deletion = useMutation({
+    mutationFn: () => deleteTask(taskId),
+    onSuccess: () => {
+      // 先に閉じてから読み直す。開いたままだと、消したタスクの詳細まで読み直して 404 になる
+      onClose()
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    },
+  })
+
+  function requestDelete() {
+    if (window.confirm('このタスクを削除しますか？')) deletion.mutate()
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -112,6 +127,11 @@ function TaskDetailDialog({
         </div>
 
         <div className={dialogStyles.body}>
+          {deletion.isError && (
+            <p className={dialogStyles.errorBox} role="alert">
+              削除できませんでした。もう一度お試しください
+            </p>
+          )}
           {isPending && <p>読み込み中...</p>}
           {isError && (
             <p className={dialogStyles.errorBox} role="alert">
@@ -132,12 +152,20 @@ function TaskDetailDialog({
           )}
         </div>
 
-        <div className={dialogStyles.foot}>
+        <div className={`${dialogStyles.foot} ${styles.foot}`}>
+          <button
+            type="button"
+            className={`${dialogStyles.button} ${styles.danger}`}
+            onClick={requestDelete}
+            disabled={!task || deletion.isPending}
+          >
+            削除
+          </button>
           <button
             type="button"
             className={`${dialogStyles.button} ${dialogStyles.primary}`}
             onClick={() => task && onEdit(task)}
-            disabled={!task}
+            disabled={!task || deletion.isPending}
           >
             編集
           </button>

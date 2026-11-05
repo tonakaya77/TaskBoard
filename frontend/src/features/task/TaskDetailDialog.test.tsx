@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Task } from '../../api/types'
 import { makeProject, makeStatus, makeTask } from '../../test/fixtures'
@@ -19,6 +19,20 @@ function mockGetTask(task: Task, status = 200) {
       status === 200 ? Response.json(task) : new Response(null, { status }),
     ),
   )
+}
+
+/**
+ * 取得はタスクを返し、削除は deleteStatus を返すように API を差し替える。
+ * 呼ばれた内容を確かめられるよう、差し替えた fetch を返す
+ */
+function mockGetAndDelete(task: Task, deleteStatus = 204) {
+  const fetchMock = vi.fn(async (_path: string, init?: RequestInit) =>
+    init?.method === 'DELETE'
+      ? new Response(null, { status: deleteStatus })
+      : Response.json(task),
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
 }
 
 function renderDialog(taskId = 1) {
@@ -44,6 +58,7 @@ function renderDialog(taskId = 1) {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe('TaskDetailDialog', () => {
@@ -136,5 +151,60 @@ describe('TaskDetailDialog', () => {
       'タスクを読み込めませんでした',
     )
     expect(screen.getByRole('button', { name: '編集' })).toBeDisabled()
+  })
+
+  it('「削除」で確認して OK なら、タスクを削除して閉じる', async () => {
+    const fetchMock = mockGetAndDelete(
+      makeTask({ id: 1, title: 'レポート提出' }),
+    )
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { onClose } = renderDialog(1)
+
+    await screen.findByRole('heading', { name: 'レポート提出' })
+    fireEvent.click(screen.getByRole('button', { name: '削除' }))
+
+    expect(confirm).toHaveBeenCalledWith('このタスクを削除しますか？')
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(fetchMock).toHaveBeenCalledWith('/api/tasks/1', { method: 'DELETE' })
+  })
+
+  it('確認でキャンセルしたら、削除しない', async () => {
+    const fetchMock = mockGetAndDelete(
+      makeTask({ id: 1, title: 'レポート提出' }),
+    )
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const { onClose } = renderDialog(1)
+
+    await screen.findByRole('heading', { name: 'レポート提出' })
+    fireEvent.click(screen.getByRole('button', { name: '削除' }))
+
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE'),
+    ).toBe(false)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('削除に失敗したら、閉じずにエラーを出す', async () => {
+    mockGetAndDelete(makeTask({ id: 1, title: 'レポート提出' }), 500)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { onClose } = renderDialog(1)
+
+    await screen.findByRole('heading', { name: 'レポート提出' })
+    fireEvent.click(screen.getByRole('button', { name: '削除' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '削除できませんでした。もう一度お試しください',
+    )
+    expect(onClose).not.toHaveBeenCalled()
+    // もう一度押せる
+    expect(screen.getByRole('button', { name: '削除' })).toBeEnabled()
+  })
+
+  it('タスクを取れないときは、削除もできない', async () => {
+    mockGetTask(makeTask(), 404)
+    renderDialog(1)
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('button', { name: '削除' })).toBeDisabled()
   })
 })
