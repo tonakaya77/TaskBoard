@@ -66,7 +66,12 @@ erDiagram
 
 ## 2. テーブル定義
 
-型は PostgreSQL を想定して書く（データベースは最終決定ではない。[技術スタック](tech-stack.md) を参照）。自動採番は `GENERATED ALWAYS AS IDENTITY` で作る。PostgreSQL には、更新時に日時を自動で変える機能（MySQL の `ON UPDATE`）がないので、`updated_at` をトリガーで変えるかアプリで入れるかは、設計で決める。削除したときの動き（4章）を、データベースの連鎖削除で実現するかアプリで実現するかは、設計で決める。
+型は PostgreSQL を想定して書く（データベースは最終決定ではない。[技術スタック](tech-stack.md) を参照）。テーブルは Flyway の SQL ファイル（`backend/src/main/resources/db/migration/`）で作る。
+
+- 自動採番は `GENERATED ALWAYS AS IDENTITY` で作る
+- 日時（`created_at`・`updated_at`）は `TIMESTAMPTZ`（タイムゾーン付き）にする。`TIMESTAMP` だと、保存される時刻がデータベースのタイムゾーン設定に左右されるため。データベースには時刻そのものを保存し、日本時間への変換はアプリで行う
+- PostgreSQL には、更新時に日時を自動で変える機能（MySQL の `ON UPDATE`）がないので、`updated_at` はトリガーで変える。SQL を自分で書く（MyBatis）ので、アプリで入れると書き忘れが起きやすいため
+- 削除したときの動き（4章）は、データベースの連鎖削除（`ON DELETE CASCADE`）で実現する。将来、論理削除（8章の拡張候補）を入れたときも、30日後に完全に消す処理でそのまま使える
 
 ### users（ユーザー）
 
@@ -76,8 +81,8 @@ erDiagram
 | name | VARCHAR(20) | ○ | | 表示名 |
 | email | VARCHAR(255) | ○ | | ログインID。重複不可 |
 | password | VARCHAR(255) | ○ | | ハッシュ化したパスワード |
-| created_at | TIMESTAMP | ○ | 現在日時 | |
-| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
+| created_at | TIMESTAMPTZ | ○ | 現在日時 | |
+| updated_at | TIMESTAMPTZ | ○ | 現在日時 | 更新時に、トリガーで現在日時へ変える |
 
 ### projects（プロジェクト）
 
@@ -86,11 +91,11 @@ erDiagram
 | id | BIGINT | ○ | 自動採番（IDENTITY） | 主キー |
 | user_id | BIGINT | ○ | | 外部キー → users.id。持ち主 |
 | title | VARCHAR(30) | ○ | | |
-| color | CHAR(7) | ○ | 基本カラーの1つ | `#` ＋ 16進数6桁 |
+| color | CHAR(7) | ○ | 基本カラーの1つ | `#` ＋ 16進数6桁。データベースでも形式を確認する（CHECK 制約） |
 | default_status_id | BIGINT | | なし（空） | 初期ステータス（未着手）。（id, default_status_id）で statuses（project_id, id）を参照する複合外部キー。ステータスを作った直後に記録する |
 | done_status_id | BIGINT | | なし（空） | 完了ステータス。（id, done_status_id）で statuses（project_id, id）を参照する複合外部キー。ステータスを作った直後に記録する |
-| created_at | TIMESTAMP | ○ | 現在日時 | |
-| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
+| created_at | TIMESTAMPTZ | ○ | 現在日時 | |
+| updated_at | TIMESTAMPTZ | ○ | 現在日時 | 更新時に、トリガーで現在日時へ変える |
 
 ### statuses（ステータス）
 
@@ -100,8 +105,8 @@ erDiagram
 | project_id | BIGINT | ○ | | 外部キー → projects.id |
 | name | VARCHAR(20) | ○ | | |
 | position | INT | ○ | | 並び順 |
-| created_at | TIMESTAMP | ○ | 現在日時 | |
-| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
+| created_at | TIMESTAMPTZ | ○ | 現在日時 | |
+| updated_at | TIMESTAMPTZ | ○ | 現在日時 | 更新時に、トリガーで現在日時へ変える |
 
 制約：（project_id, id）の組を一意にする（tasks の複合外部キーで使う）
 
@@ -118,8 +123,10 @@ erDiagram
 | position | INT | ○ | | 列の中の並び順 |
 | today_date | DATE | | なし | 今日やるタスクに選んだ日（朝4時の区切りで判断した日付） |
 | today_order | INT | | なし | 今日やるタスクの中の並び順。選んだときに、そのときの最大値＋1を入れる |
-| created_at | TIMESTAMP | ○ | 現在日時 | |
-| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
+
+制約：`today_date` と `today_order` は、両方入っているか、両方空かのどちらかにする（CHECK 制約）
+| created_at | TIMESTAMPTZ | ○ | 現在日時 | |
+| updated_at | TIMESTAMPTZ | ○ | 現在日時 | 更新時に、トリガーで現在日時へ変える |
 
 ### subtasks（サブタスク）
 
@@ -130,8 +137,8 @@ erDiagram
 | title | VARCHAR(50) | ○ | | |
 | is_done | BOOLEAN | ○ | false | 完了したか |
 | position | INT | ○ | | 並び順 |
-| created_at | TIMESTAMP | ○ | 現在日時 | |
-| updated_at | TIMESTAMP | ○ | 現在日時 | 更新時に現在日時へ変える |
+| created_at | TIMESTAMPTZ | ○ | 現在日時 | |
+| updated_at | TIMESTAMPTZ | ○ | 現在日時 | 更新時に、トリガーで現在日時へ変える |
 
 ## 3. インデックス
 
@@ -158,7 +165,7 @@ erDiagram
 |---|---|
 | 初期・完了ステータス | プロジェクトを作ると、ステータスを4つ（未着手 / 進行中 / 確認中 / 完了）自動で作る。「未着手」のIDを `projects.default_status_id` に、「完了」のIDを `projects.done_status_id` に記録する |
 | 初期・完了ステータス | `default_status_id` と `done_status_id` は、プロジェクトを作った時点ではまだ空にしておき、4つのステータスを作った直後に記録する |
-| 初期・完了ステータス | 初期か完了かはIDで判断するので、名前を変えても影響しない。初期ステータスと完了ステータスは削除できない。タスクを作るときのステータスの初期値は、初期ステータス |
+| 初期・完了ステータス | 初期か完了かはIDで判断するので、名前を変えても影響しない。初期ステータスと完了ステータスは削除できない（projects から複合外部キーで参照されているので、データベースでも削除できない）。タスクを作るときのステータスの初期値は、初期ステータス |
 | 整合性 | タスクのステータスは、同じプロジェクトのステータスに限る。保存するときにアプリ側で確認し、さらにデータベースでも `project_id` と `status_id` のセットで確認する（複合外部キー） |
 | 整合性 | プロジェクトの `default_status_id` と `done_status_id` も、そのプロジェクトのステータスに限る。アプリ側で確認し、データベースでも `id` とそれぞれのIDのセットで確認する（複合外部キー） |
 | 日付の区切り | 日時は日本時間（Asia/Tokyo）で扱う。「今日」は朝4時に切り替わる（0時〜3時59分は前の日として扱う）。今日やるタスクと期限アラートの両方で、この区切りを使う |
@@ -169,6 +176,6 @@ erDiagram
 | プロジェクトの色 | 基本カラー（赤・オレンジ・黄・緑・青・紫・ピンク・グレーの8色）から選ぶか、#付きのカラーコード（例：`#3B82F6`）で指定する。作成時は基本カラーの1つが自動で設定される |
 | 基本カラー | 基本カラーのカラーコードは、赤 `#EF4444`、オレンジ `#F97316`、黄 `#EAB308`、緑 `#22C55E`、青 `#3B82F6`、紫 `#A855F7`、ピンク `#EC4899`、グレー `#6B7280` |
 | サブタスクの数 | カードとタスク詳細に出す「完了した数 / 全体の数」は保存せず、表示するときに subtasks から数える（数を別のカラムに持つと、サブタスクを変えるたびに更新が必要になり、ずれる原因になるため） |
-| 削除 | プロジェクトを削除すると、その中のステータス・タスク・サブタスクもまとめて削除する。タスクを削除すると、そのサブタスクもまとめて削除する |
-| 削除の順番 | projects と statuses はお互いを参照しているので、プロジェクトを削除するときは、先に `default_status_id` と `done_status_id` を空にしてから、サブタスク → タスク → ステータス → プロジェクトの順に消す |
+| 削除 | プロジェクトを削除すると、その中のステータス・タスク・サブタスクもまとめて削除する。タスクを削除すると、そのサブタスクもまとめて削除する。どちらもデータベースの連鎖削除（`ON DELETE CASCADE`）で行うので、アプリはプロジェクトかタスクを1行削除するだけでよい |
+| 削除 | タスクが残っているステータスは削除できない。アプリ側で確認し、データベースでも tasks からの複合外部キーで削除できないようにする |
 | データの範囲 | ユーザーは、自分の `user_id` を持つプロジェクトと、その中のデータだけを扱える |
