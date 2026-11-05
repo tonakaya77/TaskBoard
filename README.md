@@ -18,13 +18,12 @@ cd backend
 
 | メソッド | パス | 内容 |
 |---|---|---|
-| GET | `/api/tasks` | タスクの一覧（ID 順）。`?projectId=1` でプロジェクトを絞り込める |
+| GET | `/api/tasks` | 全タスク（ID 順） |
 | GET | `/api/tasks/{id}` | タスク1件。ないときは 404 |
 | GET | `/api/tasks/status/{statusId}` | ステータス別のタスク（カンバンの列表示用）。列の中の並び順 |
 
 ```sh
 curl http://localhost:8080/api/tasks
-curl "http://localhost:8080/api/tasks?projectId=1"
 curl http://localhost:8080/api/tasks/1
 curl http://localhost:8080/api/tasks/status/1
 ```

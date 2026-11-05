@@ -35,7 +35,6 @@ class TaskControllerTests {
 	private JdbcClient jdbc;
 
 	private long projectA;
-	private long projectB;
 	private long statusA;
 	private long reportTaskId;
 
@@ -44,7 +43,7 @@ class TaskControllerTests {
 	void createData() {
 		long userId = insert("INSERT INTO users (name, email, password) VALUES ('テスト', 'test@example.com', 'hash') RETURNING id");
 		projectA = insert("INSERT INTO projects (user_id, title, color) VALUES (" + userId + ", 'A', '#3B82F6') RETURNING id");
-		projectB = insert("INSERT INTO projects (user_id, title, color) VALUES (" + userId + ", 'B', '#22C55E') RETURNING id");
+		long projectB = insert("INSERT INTO projects (user_id, title, color) VALUES (" + userId + ", 'B', '#22C55E') RETURNING id");
 		statusA = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectA + ", '未着手', 1) RETURNING id");
 		long statusB = insert("INSERT INTO statuses (project_id, name, position) VALUES (" + projectB + ", '未着手', 1) RETURNING id");
 
@@ -62,15 +61,6 @@ class TaskControllerTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(3)))
 				.andExpect(jsonPath("$[*].title").value(contains("レポート提出", "資料作成", "買い物")));
-	}
-
-	@Test
-	void findAllFiltersByProjectId() throws Exception {
-		mockMvc.perform(get("/api/tasks").param("projectId", String.valueOf(projectB)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$", hasSize(1)))
-				.andExpect(jsonPath("$[0].title").value("買い物"))
-				.andExpect(jsonPath("$[0].projectId").value(projectB));
 	}
 
 	@Test

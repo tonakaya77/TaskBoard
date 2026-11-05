@@ -13,9 +13,9 @@ public class TaskService {
 		this.taskMapper = taskMapper;
 	}
 
-	/** タスクの一覧。projectId を渡すと、そのプロジェクトのタスクだけにする。 */
-	public List<Task> findAll(Long projectId) {
-		return taskMapper.findAll(projectId);
+	/** 全タスク。 */
+	public List<Task> findAll() {
+		return taskMapper.findAll();
 	}
 
 	/** ステータス（ボードの列）のタスク。列の中の並び順にする。 */
