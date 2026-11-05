@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -111,7 +112,11 @@ class TaskControllerTests {
 	@Test
 	void findByIdReturns404WhenTaskDoesNotExist() throws Exception {
 		mockMvc.perform(get("/api/tasks/{id}", reportTaskId + 1000))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isNotFound())
+				// エラーは ProblemDetail の形で返す
+				.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.detail").value("タスクが見つかりません（id=" + (reportTaskId + 1000) + "）"));
 	}
 
 	@Test
@@ -163,7 +168,10 @@ class TaskControllerTests {
 		postTask(projectA, """
 				{"title": "   ", "statusId": %d}
 				""".formatted(statusA))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				// 入力チェックの失敗も ProblemDetail の形で返す
+				.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.status").value(400));
 	}
 
 	@Test
@@ -195,7 +203,11 @@ class TaskControllerTests {
 		postTask(projectA, """
 				{"title": "別の列", "statusId": %d}
 				""".formatted(statusB))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.detail").value(
+						"このプロジェクトのステータスではありません（projectId=" + projectA + ", statusId=" + statusB + "）"));
 
 		mockMvc.perform(get("/api/tasks/status/{statusId}", statusB))
 				.andExpect(jsonPath("$", hasSize(1)));

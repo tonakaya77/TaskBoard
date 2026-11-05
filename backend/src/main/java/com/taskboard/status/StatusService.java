@@ -3,6 +3,7 @@ package com.taskboard.status;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StatusService {
@@ -14,6 +15,7 @@ public class StatusService {
 	}
 
 	/** プロジェクトのステータス。並び順にする。 */
+	@Transactional(readOnly = true)
 	public List<Status> findByProjectId(long projectId) {
 		return statusMapper.findByProjectId(projectId);
 	}

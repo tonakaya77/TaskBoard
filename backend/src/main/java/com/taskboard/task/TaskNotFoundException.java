@@ -1,13 +1,12 @@
 package com.taskboard.task;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.server.ResponseStatusException;
 
-/** 指定した ID のタスクがない。API は 404 を返す。 */
-@ResponseStatus(HttpStatus.NOT_FOUND)
-public class TaskNotFoundException extends RuntimeException {
+/** 指定した ID のタスクがない。API は 404 を、ProblemDetail の形（detail に文言）で返す。 */
+public class TaskNotFoundException extends ResponseStatusException {
 
 	public TaskNotFoundException(long id) {
-		super("タスクが見つかりません（id=" + id + "）");
+		super(HttpStatus.NOT_FOUND, "タスクが見つかりません（id=" + id + "）");
 	}
 }

@@ -25,16 +25,19 @@ public class TaskService {
 	}
 
 	/** 全タスク。 */
+	@Transactional(readOnly = true)
 	public List<Task> findAll() {
 		return taskMapper.findAll();
 	}
 
 	/** ステータス（ボードの列）のタスク。列の中の並び順にする。 */
+	@Transactional(readOnly = true)
 	public List<Task> findByStatusId(long statusId) {
 		return taskMapper.findByStatusId(statusId);
 	}
 
 	/** タスク1件。ないときは TaskNotFoundException。 */
+	@Transactional(readOnly = true)
 	public Task findById(long id) {
 		return taskMapper.findById(id).orElseThrow(() -> new TaskNotFoundException(id));
 	}
