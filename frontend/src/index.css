@@ -7,6 +7,12 @@
   --muted: #6b778c;
   --primary: #2563eb;
   --danger: #dc2626;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+  --yellow: #a16207;
+  --yellow-bg: #fef3c7;
+  /* 緊急度「中」の色帯。--yellow は文字用で暗いので、線には明るい黄（基本カラーの黄）を使う */
+  --yellow-line: #eab308;
   --radius: 6px;
 }
 

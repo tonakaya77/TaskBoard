@@ -11,6 +11,9 @@ export type Status = {
   updatedAt: string
 }
 
+/** 緊急度。backend の Urgency.java（高・中・通常） */
+export type Urgency = 'HIGH' | 'MEDIUM' | 'NORMAL'
+
 /** タスク。backend の Task.java */
 export type Task = {
   id: number
@@ -19,6 +22,7 @@ export type Task = {
   title: string
   description: string | null
   dueDate: string | null
+  urgency: Urgency
   position: number
   todayDate: string | null
   todayOrder: number | null
