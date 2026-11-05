@@ -117,6 +117,7 @@ curl http://localhost:8080/api/projects/1/statuses
 アプリを止めても PostgreSQL は動いたまま。止めるときは `docker compose down`（データは残る）。
 
 テストは `./gradlew test`（テスト用の PostgreSQL を Testcontainers で別に起動する）。
+`./gradlew check` は、テストに加えて Checkstyle（書き方のチェック。ルールは `config/checkstyle/checkstyle.xml`）とコンパイラの警告のチェックもまとめて実行する。
 
 ### データベースの接続先
 
@@ -152,5 +153,20 @@ npm run dev    # http://localhost:5173 で開く
 - ブランチ名: `種類/イシュー番号-短い説明`（例: `feature/12-add-login`）
 - コミットメッセージ: Conventional Commits の形で日本語（例: `feat: タスク一覧APIを追加 (#12)`）
 - PR: テンプレートの項目に沿って書き、`Closes #番号` でイシューを閉じる
+
+### PR の前のチェック
+
+CI はまだないので、PR を作る前に手元で次のチェックを実行し、すべて通ることを確かめる。
+
+| 場所 | コマンド | 内容 |
+|---|---|---|
+| `backend/` | `./gradlew check` | Checkstyle・コンパイラの警告・テスト（Docker Desktop が必要） |
+| `frontend/` | `npm run lint` | ESLint |
+| `frontend/` | `npm run format:check` | Prettier の整形（直すときは `npm run format`） |
+| `frontend/` | `npm test` | テスト |
+| `frontend/` | `npm run build` | 型チェックとビルド |
+| 一番上 | `node --test .claude/hooks/` | Claude Code のフックのテスト |
+
+Claude Code では `/check` で、変えた部分のチェックをまとめて実行できる（`.claude/skills/check/SKILL.md`）。
 
 細かいルールは [CLAUDE.md](CLAUDE.md) を参照。
