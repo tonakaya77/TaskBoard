@@ -12,6 +12,21 @@ cd backend
 
 起動したら http://localhost:8080/api/health を開き、`"status":"ok"` と PostgreSQL のバージョン（`"database":"PostgreSQL 18..."`）が返れば、アプリとデータベースの両方が動いている。
 
+`./gradlew bootRun` では dev プロファイルが有効になり、開発用のテストデータ（モックと同じ内容。ユーザー1人・プロジェクト2つ・タスク6つ）が入る。入れ直したいときは `docker compose down -v` でデータベースを消してから起動する。
+
+### API
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| GET | `/api/tasks` | タスクの一覧（ID 順）。`?projectId=1` でプロジェクトを絞り込める |
+| GET | `/api/tasks/{id}` | タスク1件。ないときは 404 |
+
+```sh
+curl http://localhost:8080/api/tasks
+curl "http://localhost:8080/api/tasks?projectId=1"
+curl http://localhost:8080/api/tasks/1
+```
+
 アプリを止めても PostgreSQL は動いたまま。止めるときは `docker compose down`（データは残る）。
 
 テストは `./gradlew test`（テスト用の PostgreSQL を Testcontainers で別に起動する）。
