@@ -1,6 +1,7 @@
 package com.taskboard.project;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,7 +65,11 @@ class ProjectControllerTests {
 	@Test
 	void findByIdReturns404WhenProjectDoesNotExist() throws Exception {
 		mockMvc.perform(get("/api/projects/{id}", projectId + 1000))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isNotFound())
+				// エラーは ProblemDetail の形で返す
+				.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.detail").value("プロジェクトが見つかりません（id=" + (projectId + 1000) + "）"));
 	}
 
 	private long insert(String sql) {
