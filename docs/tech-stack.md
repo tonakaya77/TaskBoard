@@ -8,7 +8,7 @@
 
 | 分類 | 選定 | 状態 | 理由 |
 |---|---|---|---|
-| 言語 / フレームワーク | Java 21 / Spring Boot 3 | 決定 | RaiseTech の課題の指定。Java 21 は Spring Boot 3 が推奨する長期サポート版 |
+| 言語 / フレームワーク | Java 25 / Spring Boot 4 | 決定 | Java / Spring Boot は RaiseTech の課題の指定。Spring Boot は 3 系の無償サポートが終わり、Spring Initializr でも 4 系しか選べないため 4 系にした。Java 25 は最新の長期サポート版 |
 | ビルドツール | Gradle | 採用予定 | Spring Initializr の初期値で、設定ファイルが短く済む |
 | 認証 | Spring Security（セッション＋Cookie） | 採用予定 | 「最後の操作から7日間操作がなければログアウト」（[機能設計](functions.md) F-01）は、操作のたびに期限が延びるセッションの仕組みでそのまま作れる |
 | セッションの保存先 | Spring Session JDBC | 採用予定 | セッションをデータベースに保存し、サーバーを再起動してもログインが切れないようにする |
