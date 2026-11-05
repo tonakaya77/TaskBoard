@@ -154,6 +154,78 @@ describe('BoardPage', () => {
     )
   })
 
+  it('カードを押すとタスク詳細を開き、編集して保存すると詳細とカードに反映される', async () => {
+    let task = makeTask({
+      id: 1,
+      statusId: 1,
+      title: 'レポート提出',
+      description: '第3回課題',
+    })
+    mockApi({
+      '/api/projects/1': makeProject({ id: 1, title: '課題' }),
+      '/api/projects/1/statuses': [
+        makeStatus({ id: 1, name: '未着手', position: 1 }),
+        makeStatus({ id: 2, name: '進行中', position: 2 }),
+      ],
+      '/api/tasks/status/1': () => (task.statusId === 1 ? [task] : []),
+      '/api/tasks/status/2': () => (task.statusId === 2 ? [task] : []),
+      '/api/tasks/1': () => task,
+      'PUT /api/tasks/1': () => {
+        task = { ...task, title: 'レポート再提出', statusId: 2 }
+        return task
+      },
+    })
+
+    renderBoard(1)
+
+    const todo = await screen.findByRole('region', { name: '未着手' })
+    const card = await within(todo).findByRole('button', {
+      name: /レポート提出/,
+    })
+    // プロジェクトを読み終えてから押す
+    await screen.findByRole('button', { name: '+ タスクを追加' })
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: '+ タスクを追加' }),
+      ).toBeEnabled(),
+    )
+    fireEvent.click(card)
+
+    // タスク詳細が開く
+    const detail = await screen.findByRole('dialog', { name: 'レポート提出' })
+    expect(within(detail).getByText('課題 / 未着手')).toBeInTheDocument()
+    expect(within(detail).getByText('第3回課題')).toBeInTheDocument()
+
+    // 「編集」で、いまの内容が入った編集ダイアログに切り替わる
+    fireEvent.click(within(detail).getByRole('button', { name: '編集' }))
+    const form = screen.getByRole('dialog', { name: 'タスクを編集' })
+    expect(within(form).getByLabelText(/タイトル/)).toHaveValue('レポート提出')
+    fireEvent.change(within(form).getByLabelText(/タイトル/), {
+      target: { value: 'レポート再提出' },
+    })
+    fireEvent.change(within(form).getByLabelText('ステータス'), {
+      target: { value: '2' },
+    })
+    fireEvent.click(within(form).getByRole('button', { name: '保存' }))
+
+    // 保存するとタスク詳細に戻り、新しい内容が出る
+    const updated = await screen.findByRole('dialog', {
+      name: 'レポート再提出',
+    })
+    expect(within(updated).getByText('課題 / 進行中')).toBeInTheDocument()
+
+    // カードは進行中の列に移る
+    const doing = screen.getByRole('region', { name: '進行中' })
+    await waitFor(() =>
+      expect(within(doing).getByText('レポート再提出')).toBeInTheDocument(),
+    )
+    expect(within(todo).queryAllByRole('listitem')).toHaveLength(0)
+
+    // ×で閉じる
+    fireEvent.click(within(updated).getByRole('button', { name: '閉じる' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('ステータスを取れないときは、エラーを表示する', async () => {
     mockApi({})
 
