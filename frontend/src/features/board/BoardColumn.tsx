@@ -8,12 +8,14 @@ import TaskCard from './TaskCard'
 
 type Props = {
   status: Status
+  /** プロジェクトの完了ステータス。カードに緊急度を出すかの判断に使う */
+  doneStatusId: number | null
   /** カードを押したとき。タスク詳細を開く */
   onOpenTask: (taskId: number) => void
 }
 
 /** ボードの列。ステータスのタスクを取得して、カードを並べる。 */
-function BoardColumn({ status, onOpenTask }: Props) {
+function BoardColumn({ status, doneStatusId, onOpenTask }: Props) {
   const {
     data: tasks,
     isPending,
@@ -53,6 +55,7 @@ function BoardColumn({ status, onOpenTask }: Props) {
                   key={task.id}
                   task={task}
                   index={index}
+                  doneStatusId={doneStatusId}
                   onClick={() => onOpenTask(task.id)}
                 />
               ))}
