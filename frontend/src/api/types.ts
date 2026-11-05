@@ -50,3 +50,6 @@ export type CreateTaskInput = {
   urgency: Urgency
   statusId: number
 }
+
+/** タスクを更新するときに送る JSON。backend の UpdateTaskRequest.java。項目は登録と同じで、すべて送る */
+export type UpdateTaskInput = CreateTaskInput
